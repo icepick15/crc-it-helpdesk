@@ -160,8 +160,10 @@ export const mockAPI = {
     const issue = issues.find((i) => i.id === id);
     if (!issue) throw new Error('Issue not found');
 
+    const now = new Date().toISOString();
     issue.status = 'completed';
-    issue.updatedAt = new Date().toISOString();
+    issue.updatedAt = now;
+    issue.resolvedAt = now;
 
     return { issue };
   },

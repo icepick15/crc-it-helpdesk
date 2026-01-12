@@ -2,16 +2,20 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { FileDown } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatsCards } from '@/components/admin/StatsCards';
 import { AllIssuesTable } from '@/components/admin/AllIssuesTable';
 import { IssueFilters } from '@/components/admin/IssueFilters';
+import { GenerateReportModal } from '@/components/admin/GenerateReportModal';
+import { Button } from '@/components/ui/button';
 import { useAdminIssues } from '@/hooks/useAdminIssues';
 import type { Issue } from '@/lib/types';
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showReportModal, setShowReportModal] = useState(false);
   const {
     issues,
     stats,
@@ -43,11 +47,17 @@ export default function AdminDashboard() {
     <DashboardLayout requireAdmin>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">
-            Manage and respond to IT support requests
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+            <p className="text-muted-foreground">
+              Manage and respond to IT support requests
+            </p>
+          </div>
+          <Button onClick={() => setShowReportModal(true)} className="gap-2">
+            <FileDown className="h-4 w-4" />
+            Generate Report
+          </Button>
         </div>
 
         {/* Stats */}
@@ -71,6 +81,13 @@ export default function AdminDashboard() {
           onIssueClick={handleIssueClick}
         />
       </div>
+
+      {/* Generate Report Modal */}
+      <GenerateReportModal
+        open={showReportModal}
+        onOpenChange={setShowReportModal}
+        issues={issues}
+      />
     </DashboardLayout>
   );
 }

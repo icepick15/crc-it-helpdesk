@@ -25,6 +25,7 @@ export interface Issue {
   status: IssueStatus;
   createdAt: string;
   updatedAt: string;
+  resolvedAt?: string;
   employeeId: string;
   employeeName: string;
   employeeEmail: string;

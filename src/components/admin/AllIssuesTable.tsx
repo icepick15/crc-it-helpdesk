@@ -57,6 +57,7 @@ export function AllIssuesTable({
               <TableHead className="w-[110px] min-w-[100px]">Status</TableHead>
               <TableHead className="w-[90px] min-w-[80px] text-center">Replies</TableHead>
               <TableHead className="w-[120px] min-w-[110px]">Created</TableHead>
+              <TableHead className="w-[120px] min-w-[110px]">Resolved</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -95,6 +96,9 @@ export function AllIssuesTable({
                 <TableCell className="text-sm text-muted-foreground">
                   {formatDate(issue.createdAt)}
                 </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {issue.resolvedAt ? formatDate(issue.resolvedAt) : '-'}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -132,9 +136,14 @@ export function AllIssuesTable({
                   ({issue.employeeEmail})
                 </span>
               </div>
-              <span className="text-muted-foreground">
-                {formatDate(issue.createdAt)}
-              </span>
+              <div className="text-right text-muted-foreground">
+                <div>{formatDate(issue.createdAt)}</div>
+                {issue.resolvedAt && (
+                  <div className="text-xs text-green-600">
+                    Resolved: {formatDate(issue.resolvedAt)}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}

@@ -119,6 +119,11 @@ export default function AdminIssueDetails() {
                   </button>{' '}
                   on {formatDateTime(issue.createdAt)}
                 </div>
+                {issue.resolvedAt && (
+                  <div className="text-sm text-green-600">
+                    Resolved on {formatDateTime(issue.resolvedAt)}
+                  </div>
+                )}
               </div>
             </div>
           </CardHeader>
