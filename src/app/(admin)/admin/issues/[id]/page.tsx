@@ -8,9 +8,9 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { IssueConversation } from '@/components/admin/IssueConversation';
 import { ReplyForm } from '@/components/admin/ReplyForm';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { UserProfileModal } from '@/components/shared/UserProfileModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { mockAPI } from '@/lib/mock-api';
 import { formatDateTime } from '@/lib/utils';
 import type { Issue } from '@/lib/types';
@@ -20,6 +20,7 @@ export default function AdminIssueDetails() {
   const router = useRouter();
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   const issueId = params.id as string;
 
@@ -108,8 +109,15 @@ export default function AdminIssueDetails() {
                 </div>
                 <CardTitle className="text-xl">{issue.title}</CardTitle>
                 <div className="text-sm text-muted-foreground">
-                  Created by <span className="font-medium">{issue.employeeName}</span>{' '}
-                  ({issue.employeeEmail}) on {formatDateTime(issue.createdAt)}
+                  Created by{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowUserProfile(true)}
+                    className="font-medium text-primary hover:underline focus:outline-none focus:underline"
+                  >
+                    {issue.employeeName} ({issue.employeeEmail})
+                  </button>{' '}
+                  on {formatDateTime(issue.createdAt)}
                 </div>
               </div>
             </div>
@@ -140,6 +148,14 @@ export default function AdminIssueDetails() {
           </CardContent>
         </Card>
       </div>
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        open={showUserProfile}
+        onOpenChange={setShowUserProfile}
+        userEmail={issue.employeeEmail}
+        userName={issue.employeeName}
+      />
     </DashboardLayout>
   );
 }
