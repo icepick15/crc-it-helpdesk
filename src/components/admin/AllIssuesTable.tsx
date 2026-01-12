@@ -51,12 +51,12 @@ export function AllIssuesTable({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="w-[80px]">ID</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead className="w-[180px]">Employee</TableHead>
-              <TableHead className="w-[100px]">Status</TableHead>
-              <TableHead className="w-[80px] text-center">Replies</TableHead>
-              <TableHead className="w-[110px]">Created</TableHead>
+              <TableHead className="w-[70px] min-w-[70px]">ID</TableHead>
+              <TableHead className="min-w-[200px]">Title</TableHead>
+              <TableHead className="w-[200px] min-w-[180px]">Employee</TableHead>
+              <TableHead className="w-[110px] min-w-[100px]">Status</TableHead>
+              <TableHead className="w-[90px] min-w-[80px] text-center">Replies</TableHead>
+              <TableHead className="w-[120px] min-w-[110px]">Created</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -70,10 +70,10 @@ export function AllIssuesTable({
                   #{issue.id}
                 </TableCell>
                 <TableCell>
-                  <div className="font-medium truncate max-w-[280px]">
+                  <div className="font-medium truncate max-w-[400px] lg:max-w-[500px] xl:max-w-[600px]">
                     {issue.title}
                   </div>
-                  <div className="text-sm text-muted-foreground truncate max-w-[280px]">
+                  <div className="text-sm text-muted-foreground truncate max-w-[400px] lg:max-w-[500px] xl:max-w-[600px]">
                     {issue.description}
                   </div>
                 </TableCell>
