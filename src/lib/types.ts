@@ -7,6 +7,52 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  department?: string;
+  floor?: string;
+}
+
+// Backend API Types (Django REST Framework)
+export interface BackendUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: 'staff' | 'admin';
+  department: string;
+  floor: string;
+  created_at: string;
+}
+
+export interface BackendIssue {
+  id: number;
+  title: string;
+  description: string;
+  status: 'pending' | 'completed';
+  created_at: string;
+  resolved_on: string | null;
+  reported_by: number;
+  reported_by_details?: BackendUser;
+}
+
+export interface BackendMessage {
+  id: number;
+  issue: number;
+  message: string;
+  sender: number;
+  sender_details?: BackendUser;
+  timestamp: string;
+}
+
+export interface BackendTokenResponse {
+  access: string;
+  refresh: string;
+}
+
+export interface BackendPaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
 }
 
 export interface Reply {

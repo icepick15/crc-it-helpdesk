@@ -9,11 +9,8 @@ import {
   type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { mockAPI } from '@/lib/mock-api';
+import { authAPI } from '@/lib/api';
 import type { User, UserRole } from '@/lib/types';
-
-// Set to true to use mock API, false for real backend
-const USE_MOCK_API = true;
 
 interface AuthContextType {
   user: User | null;
@@ -42,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
       }
     }
     setLoading(false);
@@ -51,8 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       setLoading(true);
       try {
-        const response = await mockAPI.signIn(email, password);
-        const { user: userData, token } = response;
+        const { user: userData, token } = await authAPI.signIn(email, password);
 
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
@@ -73,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(() => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     setUser(null);
     router.push('/signin');

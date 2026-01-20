@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { mockAPI } from '@/lib/mock-api';
+import { issuesAPI, messagesAPI, statsAPI } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import type { Issue, AdminStats, StatusFilter } from '@/lib/types';
 
 export function useAdminIssues() {
+  const { user } = useAuth();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [stats, setStats] = useState<AdminStats>({ total: 0, pending: 0, completed: 0 });
   const [loading, setLoading] = useState(true);
@@ -16,8 +18,8 @@ export function useAdminIssues() {
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
     try {
-      const response = await mockAPI.getStats();
-      setStats(response.stats);
+      const fetchedStats = await statsAPI.getStats();
+      setStats(fetchedStats);
     } catch (error) {
       console.error('Failed to fetch stats:', error);
       toast.error('Failed to load statistics');
@@ -29,8 +31,18 @@ export function useAdminIssues() {
   const fetchIssues = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await mockAPI.getAllIssues(filter, monthFilter || undefined);
-      setIssues(response.issues);
+      let fetchedIssues = await issuesAPI.getAllIssues(filter);
+
+      // Apply month filter on client side if specified
+      if (monthFilter) {
+        fetchedIssues = fetchedIssues.filter((issue) => {
+          const issueDate = new Date(issue.createdAt);
+          const issueMonth = `${issueDate.getFullYear()}-${String(issueDate.getMonth() + 1).padStart(2, '0')}`;
+          return issueMonth === monthFilter;
+        });
+      }
+
+      setIssues(fetchedIssues);
     } catch (error) {
       console.error('Failed to fetch issues:', error);
       toast.error('Failed to load issues');
@@ -48,17 +60,22 @@ export function useAdminIssues() {
   }, [fetchIssues]);
 
   const replyToIssue = async (issueId: string, message: string) => {
+    if (!user?.id) {
+      toast.error('You must be logged in to reply');
+      throw new Error('Not authenticated');
+    }
+
     try {
-      const response = await mockAPI.replyToIssue(issueId, message);
+      const reply = await messagesAPI.sendMessage(issueId, message, user.id);
       setIssues((prev) =>
         prev.map((issue) =>
           issue.id === issueId
-            ? { ...issue, replies: [...issue.replies, response.reply] }
+            ? { ...issue, replies: [...issue.replies, reply] }
             : issue
         )
       );
       toast.success('Reply sent successfully');
-      return response.reply;
+      return reply;
     } catch (error) {
       console.error('Failed to reply to issue:', error);
       toast.error('Failed to send reply');
@@ -68,10 +85,10 @@ export function useAdminIssues() {
 
   const resolveIssue = async (issueId: string) => {
     try {
-      const response = await mockAPI.resolveIssue(issueId);
+      const updatedIssue = await issuesAPI.resolveIssue(issueId);
       setIssues((prev) =>
         prev.map((issue) =>
-          issue.id === issueId ? response.issue : issue
+          issue.id === issueId ? updatedIssue : issue
         )
       );
       // Update stats
@@ -81,7 +98,7 @@ export function useAdminIssues() {
         completed: prev.completed + 1,
       }));
       toast.success('Issue marked as resolved');
-      return response.issue;
+      return updatedIssue;
     } catch (error) {
       console.error('Failed to resolve issue:', error);
       toast.error('Failed to resolve issue');

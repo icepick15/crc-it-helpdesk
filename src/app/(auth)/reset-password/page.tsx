@@ -1,8 +1,9 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { SignInForm } from '@/components/auth/SignInForm';
+import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 
-export default function SignInPage() {
+export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Branding */}
@@ -21,10 +22,10 @@ export default function SignInPage() {
             <span className="text-2xl font-bold">IT Helpdesk</span>
           </div>
           <h1 className="text-4xl font-bold mb-4">
-            Get IT Support, Fast
+            Reset Your Password
           </h1>
           <p className="text-lg text-primary-foreground/80 mb-8">
-            Report technical issues, track progress, and communicate directly with our IT team. We&apos;re here to help you stay productive.
+            Enter the 6-digit verification code we sent to your email, then create a new secure password.
           </p>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
@@ -34,37 +35,37 @@ export default function SignInPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold">Quick Issue Submission</h3>
-                <p className="text-sm text-primary-foreground/70">Create tickets in seconds with our simple form</p>
+                <h3 className="font-semibold">Check Your Email</h3>
+                <p className="text-sm text-primary-foreground/70">Find the 6-digit code we sent you</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold">Real-time Updates</h3>
-                <p className="text-sm text-primary-foreground/70">Track your ticket status and communicate with IT staff</p>
+                <h3 className="font-semibold">Create Strong Password</h3>
+                <p className="text-sm text-primary-foreground/70">Use at least 6 characters</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold">Issue History</h3>
-                <p className="text-sm text-primary-foreground/70">Access your complete support history anytime</p>
+                <h3 className="font-semibold">Keep It Safe</h3>
+                <p className="text-sm text-primary-foreground/70">Don&apos;t share your password with anyone</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Right Panel - Sign In Form */}
+      {/* Right Panel - Form */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-8 bg-background">
         <Card className="w-full max-w-md border-0 shadow-none sm:border sm:shadow-sm">
           <CardHeader className="space-y-1 text-center">
@@ -79,13 +80,25 @@ export default function SignInPage() {
                 />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+            <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
             <CardDescription>
-              Sign in to your account to continue
+              Enter your verification code and new password
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SignInForm />
+            <ResetPasswordForm />
+            <div className="mt-6 text-center text-sm space-y-2">
+              <p>
+                <Link href="/forgot-password" className="text-primary hover:underline">
+                  Didn&apos;t receive the code? Send again
+                </Link>
+              </p>
+              <p>
+                <Link href="/signin" className="text-muted-foreground hover:underline">
+                  Back to Sign In
+                </Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
