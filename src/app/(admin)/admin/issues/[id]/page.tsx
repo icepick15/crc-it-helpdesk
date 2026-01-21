@@ -11,13 +11,15 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { UserProfileModal } from '@/components/shared/UserProfileModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { mockAPI } from '@/lib/mock-api';
+import { issuesAPI, messagesAPI } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { formatDateTime } from '@/lib/utils';
 import type { Issue } from '@/lib/types';
 
 export default function AdminIssueDetails() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -28,8 +30,8 @@ export default function AdminIssueDetails() {
     async function fetchIssue() {
       setLoading(true);
       try {
-        const response = await mockAPI.getIssueDetails(issueId);
-        setIssue(response.issue);
+        const fetchedIssue = await issuesAPI.getIssue(issueId);
+        setIssue(fetchedIssue);
       } catch (error) {
         console.error('Failed to fetch issue:', error);
         toast.error('Issue not found');
@@ -45,12 +47,12 @@ export default function AdminIssueDetails() {
   }, [issueId, router]);
 
   const handleReply = async (message: string) => {
-    if (!issue) return;
+    if (!issue || !user) return;
     try {
-      const response = await mockAPI.replyToIssue(issue.id, message);
+      const reply = await messagesAPI.sendMessage(issue.id, message, user.id);
       setIssue({
         ...issue,
-        replies: [...issue.replies, response.reply],
+        replies: [...issue.replies, reply],
       });
       toast.success('Reply sent successfully');
     } catch (error) {
@@ -62,8 +64,8 @@ export default function AdminIssueDetails() {
   const handleResolve = async () => {
     if (!issue) return;
     try {
-      const response = await mockAPI.resolveIssue(issue.id);
-      setIssue(response.issue);
+      const resolvedIssue = await issuesAPI.resolveIssue(issue.id);
+      setIssue(resolvedIssue);
       toast.success('Issue marked as resolved');
     } catch (error) {
       toast.error('Failed to resolve issue');
