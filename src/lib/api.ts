@@ -259,7 +259,13 @@ export const issuesAPI = {
       resolved_on: new Date().toISOString(),
     });
 
-    return transformBackendIssue(response.data);
+    // Fetch reporter details and messages
+    const [messagesWithSenders, userResponse] = await Promise.all([
+      fetchMessagesWithSenders(response.data.id),
+      apiClient.get<BackendUser>(`/users/${response.data.reported_by}/`),
+    ]);
+
+    return transformBackendIssue(response.data, messagesWithSenders, userResponse.data);
   },
 
   // Reopen issue (admin)
@@ -269,7 +275,13 @@ export const issuesAPI = {
       resolved_on: null,
     });
 
-    return transformBackendIssue(response.data);
+    // Fetch reporter details and messages
+    const [messagesWithSenders, userResponse] = await Promise.all([
+      fetchMessagesWithSenders(response.data.id),
+      apiClient.get<BackendUser>(`/users/${response.data.reported_by}/`),
+    ]);
+
+    return transformBackendIssue(response.data, messagesWithSenders, userResponse.data);
   },
 };
 
