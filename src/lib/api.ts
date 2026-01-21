@@ -261,6 +261,16 @@ export const issuesAPI = {
 
     return transformBackendIssue(response.data);
   },
+
+  // Reopen issue (admin)
+  reopenIssue: async (issueId: string): Promise<Issue> => {
+    const response = await apiClient.patch<BackendIssue>(`/issues/${issueId}/`, {
+      status: 'pending',
+      resolved_on: null,
+    });
+
+    return transformBackendIssue(response.data);
+  },
 };
 
 // ============ Messages API ============

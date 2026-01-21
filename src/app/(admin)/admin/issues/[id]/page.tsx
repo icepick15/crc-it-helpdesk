@@ -77,6 +77,18 @@ export default function AdminIssueDetails() {
     }
   };
 
+  const handleReopen = async () => {
+    if (!issue) return;
+    try {
+      const reopenedIssue = await issuesAPI.reopenIssue(issue.id);
+      setIssue(reopenedIssue);
+      toast.success('Issue reopened');
+    } catch (error) {
+      toast.error('Failed to reopen issue');
+      throw error;
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout requireAdmin>
@@ -154,6 +166,7 @@ export default function AdminIssueDetails() {
             <ReplyForm
               onReply={handleReply}
               onResolve={handleResolve}
+              onReopen={handleReopen}
               isResolved={issue.status === 'completed'}
             />
           </CardContent>
