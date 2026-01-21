@@ -102,6 +102,23 @@ function transformBackendMessage(message: BackendMessage): Reply {
   };
 }
 
+// Helper to fetch messages with sender details
+async function fetchMessagesWithSenders(issueId: number): Promise<BackendMessage[]> {
+  const messagesResponse = await apiClient.get<BackendPaginatedResponse<BackendMessage>>('/messages/', {
+    params: { issue: issueId },
+  });
+
+  // Fetch sender details for each message in parallel
+  const messagesWithSenders = await Promise.all(
+    messagesResponse.data.results.map(async (msg) => {
+      const senderResponse = await apiClient.get<BackendUser>(`/users/${msg.sender}/`);
+      return { ...msg, sender_details: senderResponse.data };
+    })
+  );
+
+  return messagesWithSenders;
+}
+
 // ============ Auth API ============
 
 export const authAPI = {
@@ -165,17 +182,17 @@ export const issuesAPI = {
       params.status = status;
     }
 
-    const response = await apiClient.get<BackendPaginatedResponse<BackendIssue>>('/issues/', {
-      params,
-    });
+    // Fetch issues and user details in parallel
+    const [issuesResponse, userResponse] = await Promise.all([
+      apiClient.get<BackendPaginatedResponse<BackendIssue>>('/issues/', { params }),
+      apiClient.get<BackendUser>(`/users/${userId}/`),
+    ]);
 
-    // Fetch messages for each issue
+    // Fetch messages with sender details for each issue
     const issues = await Promise.all(
-      response.data.results.map(async (issue) => {
-        const messagesResponse = await apiClient.get<BackendPaginatedResponse<BackendMessage>>('/messages/', {
-          params: { issue: issue.id },
-        });
-        return transformBackendIssue(issue, messagesResponse.data.results);
+      issuesResponse.data.results.map(async (issue) => {
+        const messagesWithSenders = await fetchMessagesWithSenders(issue.id);
+        return transformBackendIssue(issue, messagesWithSenders, userResponse.data);
       })
     );
 
@@ -193,16 +210,14 @@ export const issuesAPI = {
       params,
     });
 
-    // Fetch messages and reporter details for each issue
+    // Fetch messages with sender details and reporter details for each issue
     const issues = await Promise.all(
       response.data.results.map(async (issue) => {
-        const [messagesResponse, userResponse] = await Promise.all([
-          apiClient.get<BackendPaginatedResponse<BackendMessage>>('/messages/', {
-            params: { issue: issue.id },
-          }),
+        const [messagesWithSenders, userResponse] = await Promise.all([
+          fetchMessagesWithSenders(issue.id),
           apiClient.get<BackendUser>(`/users/${issue.reported_by}/`),
         ]);
-        return transformBackendIssue(issue, messagesResponse.data.results, userResponse.data);
+        return transformBackendIssue(issue, messagesWithSenders, userResponse.data);
       })
     );
 
@@ -211,17 +226,16 @@ export const issuesAPI = {
 
   // Get single issue with details
   getIssue: async (issueId: string): Promise<Issue> => {
-    const [issueResponse, messagesResponse] = await Promise.all([
-      apiClient.get<BackendIssue>(`/issues/${issueId}/`),
-      apiClient.get<BackendPaginatedResponse<BackendMessage>>('/messages/', {
-        params: { issue: issueId },
-      }),
+    const issueResponse = await apiClient.get<BackendIssue>(`/issues/${issueId}/`);
+    const issue = issueResponse.data;
+
+    // Fetch messages with sender details and reporter details in parallel
+    const [messagesWithSenders, userResponse] = await Promise.all([
+      fetchMessagesWithSenders(issue.id),
+      apiClient.get<BackendUser>(`/users/${issue.reported_by}/`),
     ]);
 
-    const issue = issueResponse.data;
-    const userResponse = await apiClient.get<BackendUser>(`/users/${issue.reported_by}/`);
-
-    return transformBackendIssue(issue, messagesResponse.data.results, userResponse.data);
+    return transformBackendIssue(issue, messagesWithSenders, userResponse.data);
   },
 
   // Create new issue
@@ -232,7 +246,10 @@ export const issuesAPI = {
       reported_by: parseInt(userId),
     });
 
-    return transformBackendIssue(response.data);
+    // Fetch user details for the created issue
+    const userResponse = await apiClient.get<BackendUser>(`/users/${userId}/`);
+
+    return transformBackendIssue(response.data, [], userResponse.data);
   },
 
   // Resolve issue (admin)
@@ -249,15 +266,27 @@ export const issuesAPI = {
 // ============ Messages API ============
 
 export const messagesAPI = {
-  // Send a reply/message
-  sendMessage: async (issueId: string, message: string, senderId: string): Promise<Reply> => {
+  // Send a reply/message - accepts sender info to avoid extra API call
+  sendMessage: async (
+    issueId: string,
+    message: string,
+    sender: { id: string; name: string; role: 'employee' | 'admin' }
+  ): Promise<Reply> => {
     const response = await apiClient.post<BackendMessage>('/messages/', {
       issue: parseInt(issueId),
       message,
-      sender: parseInt(senderId),
+      sender: parseInt(sender.id),
     });
 
-    return transformBackendMessage(response.data);
+    // Build reply directly from response and provided sender info (no extra API call)
+    return {
+      id: String(response.data.id),
+      issueId: String(response.data.issue),
+      message: response.data.message,
+      authorRole: sender.role,
+      authorName: sender.name,
+      createdAt: response.data.timestamp,
+    };
   },
 
   // Get messages for an issue

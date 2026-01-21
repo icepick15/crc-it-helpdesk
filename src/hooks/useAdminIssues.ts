@@ -66,7 +66,11 @@ export function useAdminIssues() {
     }
 
     try {
-      const reply = await messagesAPI.sendMessage(issueId, message, user.id);
+      const reply = await messagesAPI.sendMessage(issueId, message, {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+      });
       setIssues((prev) =>
         prev.map((issue) =>
           issue.id === issueId

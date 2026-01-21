@@ -49,7 +49,11 @@ export default function AdminIssueDetails() {
   const handleReply = async (message: string) => {
     if (!issue || !user) return;
     try {
-      const reply = await messagesAPI.sendMessage(issue.id, message, user.id);
+      const reply = await messagesAPI.sendMessage(issue.id, message, {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+      });
       setIssue({
         ...issue,
         replies: [...issue.replies, reply],
