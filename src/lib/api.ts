@@ -19,6 +19,7 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true', // Skip ngrok browser warning page
   },
 });
 
@@ -358,6 +359,13 @@ export const usersAPI = {
 
 // ============ Password Reset API ============
 
+// Helper to safely get array from paginated or direct response
+function getResultsArray<T>(data: { results?: T[] } | T[]): T[] {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.results)) return data.results;
+  return [];
+}
+
 export const verifyAPI = {
   // Request password reset code (sends email with code)
   requestCode: async (email: string): Promise<void> => {
@@ -366,7 +374,8 @@ export const verifyAPI = {
       params: { email },
     });
 
-    const user = usersResponse.data.results.find(u => u.email === email);
+    const usersArray = getResultsArray(usersResponse.data);
+    const user = usersArray.find((u: BackendUser) => u.email === email);
     if (!user) {
       throw new Error('No account found with this email address');
     }
@@ -383,7 +392,8 @@ export const verifyAPI = {
       params: { code },
     });
 
-    const verification = response.data.results.find(v => v.code === code && !v.used);
+    const verifyArray = getResultsArray(response.data);
+    const verification = verifyArray.find((v: { code: string; used: boolean }) => v.code === code && !v.used);
     if (!verification) {
       throw new Error('Invalid or expired verification code');
     }
