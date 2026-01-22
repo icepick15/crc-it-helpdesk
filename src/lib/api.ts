@@ -306,18 +306,25 @@ export const issuesAPI = {
 
   // Resolve issue (admin)
   resolveIssue: async (issueId: string): Promise<Issue> => {
+    const resolvedTimestamp = new Date().toISOString();
     const response = await apiClient.patch<BackendIssue>(`/issues/${issueId}/`, {
       status: 'completed',
-      resolved_on: new Date().toISOString(),
+      resolved_on: resolvedTimestamp,
     });
+
+    // Ensure resolved_on is set (use our timestamp if backend doesn't return it)
+    const issueData = {
+      ...response.data,
+      resolved_on: response.data.resolved_on || resolvedTimestamp,
+    };
 
     // Fetch reporter details and messages
     const [messagesWithSenders, userResponse] = await Promise.all([
-      fetchMessagesWithSenders(response.data.id),
-      apiClient.get<BackendUser>(`/users/${response.data.reported_by}/`),
+      fetchMessagesWithSenders(issueData.id),
+      apiClient.get<BackendUser>(`/users/${issueData.reported_by}/`),
     ]);
 
-    return transformBackendIssue(response.data, messagesWithSenders, userResponse.data);
+    return transformBackendIssue(issueData, messagesWithSenders, userResponse.data);
   },
 
   // Reopen issue (admin)

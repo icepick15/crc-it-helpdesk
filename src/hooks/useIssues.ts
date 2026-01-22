@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { issuesAPI, messagesAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -11,6 +11,7 @@ export function useIssues() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>('all');
+  const fetchedRef = useRef<string | null>(null);
 
   const fetchIssues = useCallback(async () => {
     if (!user?.id) return;
@@ -27,9 +28,16 @@ export function useIssues() {
     }
   }, [filter, user?.id]);
 
+  // Fetch issues only when user.id or filter actually changes
   useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchKey = `${user.id}-${filter}`;
+    if (fetchedRef.current === fetchKey) return;
+
+    fetchedRef.current = fetchKey;
     fetchIssues();
-  }, [fetchIssues]);
+  }, [user?.id, filter, fetchIssues]);
 
   const createIssue = async (title: string, description: string) => {
     if (!user?.id) {
@@ -90,6 +98,12 @@ export function useIssues() {
     }
   };
 
+  // Manual refetch that bypasses the duplicate check
+  const refetch = useCallback(() => {
+    fetchedRef.current = null;
+    fetchIssues();
+  }, [fetchIssues]);
+
   return {
     issues,
     loading,
@@ -98,6 +112,6 @@ export function useIssues() {
     createIssue,
     replyToIssue,
     refreshIssue,
-    refetch: fetchIssues,
+    refetch,
   };
 }

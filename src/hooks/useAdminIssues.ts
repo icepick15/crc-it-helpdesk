@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { issuesAPI, messagesAPI, statsAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -14,6 +14,8 @@ export function useAdminIssues() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [monthFilter, setMonthFilter] = useState<string>('');
+  const fetchedRef = useRef<string | null>(null);
+  const statsFetchedRef = useRef(false);
 
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
@@ -51,13 +53,20 @@ export function useAdminIssues() {
     }
   }, [filter, monthFilter]);
 
+  // Fetch stats only once on mount
   useEffect(() => {
+    if (statsFetchedRef.current) return;
+    statsFetchedRef.current = true;
     fetchStats();
   }, [fetchStats]);
 
+  // Fetch issues only when filter actually changes
   useEffect(() => {
+    const fetchKey = `${filter}-${monthFilter}`;
+    if (fetchedRef.current === fetchKey) return;
+    fetchedRef.current = fetchKey;
     fetchIssues();
-  }, [fetchIssues]);
+  }, [filter, monthFilter, fetchIssues]);
 
   const replyToIssue = async (issueId: string, message: string) => {
     if (!user?.id) {
@@ -114,6 +123,17 @@ export function useAdminIssues() {
     return issues.find((issue) => issue.id === id);
   };
 
+  // Manual refetch that bypasses the duplicate check
+  const refetch = useCallback(() => {
+    fetchedRef.current = null;
+    fetchIssues();
+  }, [fetchIssues]);
+
+  const refetchStats = useCallback(() => {
+    statsFetchedRef.current = false;
+    fetchStats();
+  }, [fetchStats]);
+
   return {
     issues,
     stats,
@@ -126,7 +146,7 @@ export function useAdminIssues() {
     replyToIssue,
     resolveIssue,
     getIssueById,
-    refetch: fetchIssues,
-    refetchStats: fetchStats,
+    refetch,
+    refetchStats,
   };
 }
