@@ -52,34 +52,29 @@ apiClient.interceptors.response.use(
 // ============ Transformation Functions ============
 
 function transformBackendUser(backendUser: BackendUser): User {
-  // Handle different possible field names
-  const userData = backendUser as unknown as Record<string, string>;
+  // Backend fields: first_name, last_name, email, role, department, floor
+  // Use nullish coalescing (??) to handle null values from database
 
-  // Try various name field formats
-  const firstName = backendUser.first_name || userData.firstName || userData.first_name || '';
-  const lastName = backendUser.last_name || userData.lastName || userData.last_name || '';
-  const directName = userData.name || userData.full_name || userData.fullName || userData.username || '';
-  const emailName = (backendUser.email || userData.email || '').split('@')[0] || '';
+  const firstName = backendUser.first_name ?? '';
+  const lastName = backendUser.last_name ?? '';
+  const email = backendUser.email ?? '';
+  const role = backendUser.role ?? 'staff';
 
-  // Build full name with fallbacks
+  // Build full name - use email username as fallback
   const combinedName = `${firstName} ${lastName}`.trim();
-  const fullName = combinedName || directName || emailName || 'User';
+  const emailUsername = email.split('@')[0] || '';
+  const fullName = combinedName || emailUsername || 'User';
 
-  // Handle role - check various formats, default to employee for security
-  const backendRole = (backendUser.role || userData.userRole || userData.user_role || '').toLowerCase();
-  const isAdmin = backendRole === 'admin' || backendRole === 'administrator';
-  const role = isAdmin ? 'admin' : 'employee';
-
-  // Handle email
-  const email = backendUser.email || userData.email || '';
+  // Map role: only 'admin' gets admin access, everything else is employee
+  const mappedRole = role.toLowerCase() === 'admin' ? 'admin' : 'employee';
 
   return {
     id: String(backendUser.id),
     email,
     name: fullName,
-    role,
-    department: backendUser.department || userData.department || '',
-    floor: backendUser.floor || userData.floor || '',
+    role: mappedRole,
+    department: backendUser.department ?? '',
+    floor: backendUser.floor ?? '',
   };
 }
 
@@ -282,11 +277,11 @@ export const issuesAPI = {
 
   // Create new issue
   createIssue: async (title: string, description: string, userId: string): Promise<Issue> => {
+    // Only send required fields - status has default 'pending' in backend model
     const response = await apiClient.post<BackendIssue>('/issues/', {
       title,
       description,
       reported_by: parseInt(userId),
-      status: 'pending',
     });
 
     // Fetch user details for the created issue
