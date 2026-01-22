@@ -119,6 +119,19 @@ async function fetchMessagesWithSenders(issueId: number): Promise<BackendMessage
   return messagesWithSenders;
 }
 
+// Helper to decode JWT token payload
+function decodeJwtPayload(token: string): { user_id: number } {
+  const base64Url = token.split('.')[1];
+  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+  const jsonPayload = decodeURIComponent(
+    atob(base64)
+      .split('')
+      .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+      .join('')
+  );
+  return JSON.parse(jsonPayload);
+}
+
 // ============ Auth API ============
 
 export const authAPI = {
@@ -138,21 +151,13 @@ export const authAPI = {
     // Set token for subsequent requests
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${access}`;
 
-    // Fetch current user info
-    const usersResponse = await apiClient.get<BackendPaginatedResponse<BackendUser>>('/users/', {
-      params: { email },
-    });
+    // Decode JWT to get user ID
+    const payload = decodeJwtPayload(access);
+    const userId = payload.user_id;
 
-    // Handle both paginated response (results array) and direct array response
-    const usersData = usersResponse.data.results || usersResponse.data;
-    const usersArray = Array.isArray(usersData) ? usersData : [];
-    const backendUser = usersArray.find((u: BackendUser) => u.email === email);
-
-    if (!backendUser) {
-      throw new Error('User not found');
-    }
-
-    const user = transformBackendUser(backendUser);
+    // Fetch user by ID directly
+    const userResponse = await apiClient.get<BackendUser>(`/users/${userId}/`);
+    const user = transformBackendUser(userResponse.data);
 
     return { user, token: access };
   },
