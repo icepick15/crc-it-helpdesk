@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
               </div>
               <div>
                 <h3 className="font-semibold">Check Your Inbox</h3>
-                <p className="text-sm text-primary-foreground/70">We&apos;ll send you a 6-digit verification code</p>
+                <p className="text-sm text-primary-foreground/70">We&apos;ll send you a 5-digit verification code</p>
               </div>
             </div>
             <div className="flex items-start gap-3">

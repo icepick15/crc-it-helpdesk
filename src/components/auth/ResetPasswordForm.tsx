@@ -80,10 +80,10 @@ export function ResetPasswordForm() {
                   <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="text"
-                    placeholder="Enter 6-digit code"
+                    placeholder="Enter 5-digit code"
                     autoComplete="one-time-code"
                     disabled={isLoading}
-                    maxLength={6}
+                    maxLength={5}
                     className="pl-10 text-center tracking-widest font-mono text-lg"
                     {...field}
                   />

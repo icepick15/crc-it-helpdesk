@@ -30,7 +30,7 @@ export const forgotPasswordSchema = z.object({
 export const resetPasswordSchema = z.object({
   code: z
     .string()
-    .length(6, 'Verification code must be 6 digits')
+    .length(5, 'Verification code must be 5 digits')
     .regex(/^\d+$/, 'Verification code must contain only numbers'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),

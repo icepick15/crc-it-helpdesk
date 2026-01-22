@@ -25,7 +25,7 @@ export default function ResetPasswordPage() {
             Reset Your Password
           </h1>
           <p className="text-lg text-primary-foreground/80 mb-8">
-            Enter the 6-digit verification code we sent to your email, then create a new secure password.
+            Enter the 5-digit verification code we sent to your email, then create a new secure password.
           </p>
           <div className="space-y-4">
             <div className="flex items-start gap-3">
@@ -36,7 +36,7 @@ export default function ResetPasswordPage() {
               </div>
               <div>
                 <h3 className="font-semibold">Check Your Email</h3>
-                <p className="text-sm text-primary-foreground/70">Find the 6-digit code we sent you</p>
+                <p className="text-sm text-primary-foreground/70">Find the 5-digit code we sent you</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
