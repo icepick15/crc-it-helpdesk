@@ -56,6 +56,12 @@ function transformBackendUser(backendUser: BackendUser): User {
   // Backend fields: first_name, last_name, email, role, department, floor
   // Use nullish coalescing (??) to handle null values from database
 
+  // Validate that we have a valid ID
+  if (backendUser.id === undefined || backendUser.id === null) {
+    console.error('Backend user missing ID:', backendUser);
+    throw new Error('User data is invalid. Please try signing in again.');
+  }
+
   const firstName = backendUser.first_name ?? '';
   const lastName = backendUser.last_name ?? '';
   const email = backendUser.email ?? '';
@@ -278,11 +284,18 @@ export const issuesAPI = {
 
   // Create new issue
   createIssue: async (title: string, description: string, userId: string): Promise<Issue> => {
+    // Validate userId is a valid number
+    const userIdNum = parseInt(userId, 10);
+    if (isNaN(userIdNum)) {
+      console.error('Invalid userId:', userId);
+      throw new Error('Invalid user ID. Please sign out and sign in again.');
+    }
+
     // Only send required fields - status has default 'pending' in backend model
     const response = await apiClient.post<BackendIssue>('/issues/', {
       title,
       description,
-      reported_by: parseInt(userId),
+      reported_by: userIdNum,
     });
 
     // Fetch user details for the created issue
