@@ -52,13 +52,24 @@ apiClient.interceptors.response.use(
 // ============ Transformation Functions ============
 
 function transformBackendUser(backendUser: BackendUser): User {
+  // Handle different possible field names for name
+  const userData = backendUser as unknown as Record<string, string>;
+  const firstName = backendUser.first_name || userData.firstName || '';
+  const lastName = backendUser.last_name || userData.lastName || '';
+  const fullName = `${firstName} ${lastName}`.trim() || backendUser.email?.split('@')[0] || 'User';
+
+  // Handle role - check various formats, default to employee for security
+  const backendRole = (backendUser.role || userData.userRole || '').toLowerCase();
+  const isAdmin = backendRole === 'admin' || backendRole === 'administrator';
+  const role = isAdmin ? 'admin' : 'employee';
+
   return {
     id: String(backendUser.id),
     email: backendUser.email,
-    name: `${backendUser.first_name} ${backendUser.last_name}`.trim(),
-    role: backendUser.role === 'staff' ? 'employee' : 'admin',
-    department: backendUser.department,
-    floor: backendUser.floor,
+    name: fullName,
+    role,
+    department: backendUser.department || '',
+    floor: backendUser.floor || '',
   };
 }
 
