@@ -102,15 +102,24 @@ function transformBackendMessage(message: BackendMessage): Reply {
   };
 }
 
+// Helper to safely get array from paginated or direct response
+function getResultsArray<T>(data: { results?: T[] } | T[]): T[] {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.results)) return data.results;
+  return [];
+}
+
 // Helper to fetch messages with sender details
 async function fetchMessagesWithSenders(issueId: number): Promise<BackendMessage[]> {
   const messagesResponse = await apiClient.get<BackendPaginatedResponse<BackendMessage>>('/messages/', {
     params: { issue: issueId },
   });
 
+  const messages = getResultsArray(messagesResponse.data);
+
   // Fetch sender details for each message in parallel
   const messagesWithSenders = await Promise.all(
-    messagesResponse.data.results.map(async (msg) => {
+    messages.map(async (msg) => {
       const senderResponse = await apiClient.get<BackendUser>(`/users/${msg.sender}/`);
       return { ...msg, sender_details: senderResponse.data };
     })
@@ -196,9 +205,11 @@ export const issuesAPI = {
       apiClient.get<BackendUser>(`/users/${userId}/`),
     ]);
 
+    const issuesArray = getResultsArray(issuesResponse.data);
+
     // Fetch messages with sender details for each issue
     const issues = await Promise.all(
-      issuesResponse.data.results.map(async (issue) => {
+      issuesArray.map(async (issue) => {
         const messagesWithSenders = await fetchMessagesWithSenders(issue.id);
         return transformBackendIssue(issue, messagesWithSenders, userResponse.data);
       })
@@ -218,9 +229,11 @@ export const issuesAPI = {
       params,
     });
 
+    const issuesArray = getResultsArray(response.data);
+
     // Fetch messages with sender details and reporter details for each issue
     const issues = await Promise.all(
-      response.data.results.map(async (issue) => {
+      issuesArray.map(async (issue) => {
         const [messagesWithSenders, userResponse] = await Promise.all([
           fetchMessagesWithSenders(issue.id),
           apiClient.get<BackendUser>(`/users/${issue.reported_by}/`),
@@ -325,7 +338,8 @@ export const messagesAPI = {
       params: { issue: issueId },
     });
 
-    return response.data.results.map(transformBackendMessage);
+    const messagesArray = getResultsArray(response.data);
+    return messagesArray.map(transformBackendMessage);
   },
 };
 
@@ -336,7 +350,7 @@ export const statsAPI = {
   getStats: async (): Promise<AdminStats> => {
     const response = await apiClient.get<BackendPaginatedResponse<BackendIssue>>('/issues/');
 
-    const issues = response.data.results;
+    const issues = getResultsArray(response.data);
     const total = issues.length;
     const pending = issues.filter(i => i.status === 'pending').length;
     const completed = issues.filter(i => i.status === 'completed').length;
@@ -357,18 +371,12 @@ export const usersAPI = {
   // Get all users
   getAllUsers: async (): Promise<User[]> => {
     const response = await apiClient.get<BackendPaginatedResponse<BackendUser>>('/users/');
-    return response.data.results.map(transformBackendUser);
+    const usersArray = getResultsArray(response.data);
+    return usersArray.map(transformBackendUser);
   },
 };
 
 // ============ Password Reset API ============
-
-// Helper to safely get array from paginated or direct response
-function getResultsArray<T>(data: { results?: T[] } | T[]): T[] {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.results)) return data.results;
-  return [];
-}
 
 export const verifyAPI = {
   // Request password reset code (sends email with code)
