@@ -52,24 +52,34 @@ apiClient.interceptors.response.use(
 // ============ Transformation Functions ============
 
 function transformBackendUser(backendUser: BackendUser): User {
-  // Handle different possible field names for name
+  // Handle different possible field names
   const userData = backendUser as unknown as Record<string, string>;
-  const firstName = backendUser.first_name || userData.firstName || '';
-  const lastName = backendUser.last_name || userData.lastName || '';
-  const fullName = `${firstName} ${lastName}`.trim() || backendUser.email?.split('@')[0] || 'User';
+
+  // Try various name field formats
+  const firstName = backendUser.first_name || userData.firstName || userData.first_name || '';
+  const lastName = backendUser.last_name || userData.lastName || userData.last_name || '';
+  const directName = userData.name || userData.full_name || userData.fullName || userData.username || '';
+  const emailName = (backendUser.email || userData.email || '').split('@')[0] || '';
+
+  // Build full name with fallbacks
+  const combinedName = `${firstName} ${lastName}`.trim();
+  const fullName = combinedName || directName || emailName || 'User';
 
   // Handle role - check various formats, default to employee for security
-  const backendRole = (backendUser.role || userData.userRole || '').toLowerCase();
+  const backendRole = (backendUser.role || userData.userRole || userData.user_role || '').toLowerCase();
   const isAdmin = backendRole === 'admin' || backendRole === 'administrator';
   const role = isAdmin ? 'admin' : 'employee';
 
+  // Handle email
+  const email = backendUser.email || userData.email || '';
+
   return {
     id: String(backendUser.id),
-    email: backendUser.email,
+    email,
     name: fullName,
     role,
-    department: backendUser.department || '',
-    floor: backendUser.floor || '',
+    department: backendUser.department || userData.department || '',
+    floor: backendUser.floor || userData.floor || '',
   };
 }
 
@@ -276,6 +286,7 @@ export const issuesAPI = {
       title,
       description,
       reported_by: parseInt(userId),
+      status: 'pending',
     });
 
     // Fetch user details for the created issue
