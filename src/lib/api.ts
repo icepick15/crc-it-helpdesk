@@ -132,6 +132,19 @@ function getResultsArray<T>(data: { results?: T[] } | T[]): T[] {
   return [];
 }
 
+// Simple user cache to avoid duplicate fetches
+const userCache = new Map<number, BackendUser>();
+
+// Helper to fetch user with caching
+async function fetchUserCached(userId: number): Promise<BackendUser> {
+  if (userCache.has(userId)) {
+    return userCache.get(userId)!;
+  }
+  const response = await apiClient.get<BackendUser>(`/users/${userId}/`);
+  userCache.set(userId, response.data);
+  return response.data;
+}
+
 // Helper to fetch messages with sender details
 async function fetchMessagesWithSenders(issueId: number): Promise<BackendMessage[]> {
   const messagesResponse = await apiClient.get<BackendPaginatedResponse<BackendMessage>>('/messages/', {
@@ -140,15 +153,17 @@ async function fetchMessagesWithSenders(issueId: number): Promise<BackendMessage
 
   const messages = getResultsArray(messagesResponse.data);
 
-  // Fetch sender details for each message in parallel
-  const messagesWithSenders = await Promise.all(
-    messages.map(async (msg) => {
-      const senderResponse = await apiClient.get<BackendUser>(`/users/${msg.sender}/`);
-      return { ...msg, sender_details: senderResponse.data };
-    })
-  );
+  // Get unique sender IDs
+  const uniqueSenderIds = [...new Set(messages.map((msg) => msg.sender))];
 
-  return messagesWithSenders;
+  // Fetch unique senders with caching
+  await Promise.all(uniqueSenderIds.map((senderId) => fetchUserCached(senderId)));
+
+  // Map messages with cached sender details
+  return messages.map((msg) => ({
+    ...msg,
+    sender_details: userCache.get(msg.sender),
+  }));
 }
 
 // Helper to decode JWT token payload
@@ -187,9 +202,9 @@ export const authAPI = {
     const payload = decodeJwtPayload(access);
     const userId = payload.user_id;
 
-    // Fetch user by ID directly
-    const userResponse = await apiClient.get<BackendUser>(`/users/${userId}/`);
-    const user = transformBackendUser(userResponse.data);
+    // Fetch user by ID and cache it
+    const backendUser = await fetchUserCached(userId);
+    const user = transformBackendUser(backendUser);
 
     return { user, token: access };
   },
@@ -215,33 +230,28 @@ export const authAPI = {
 // ============ Issues API ============
 
 export const issuesAPI = {
-  // Get issues for current employee
+  // Get issues for current employee (list view - no messages for performance)
   getMyIssues: async (userId: string, status?: StatusFilter): Promise<Issue[]> => {
     const params: Record<string, string> = { reported_by: userId };
     if (status && status !== 'all') {
       params.status = status;
     }
 
-    // Fetch issues and user details in parallel
-    const [issuesResponse, userResponse] = await Promise.all([
+    // Fetch issues and user details in parallel (user is cached)
+    const [issuesResponse, userData] = await Promise.all([
       apiClient.get<BackendPaginatedResponse<BackendIssue>>('/issues/', { params }),
-      apiClient.get<BackendUser>(`/users/${userId}/`),
+      fetchUserCached(parseInt(userId, 10)),
     ]);
 
     const issuesArray = getResultsArray(issuesResponse.data);
 
-    // Fetch messages with sender details for each issue
-    const issues = await Promise.all(
-      issuesArray.map(async (issue) => {
-        const messagesWithSenders = await fetchMessagesWithSenders(issue.id);
-        return transformBackendIssue(issue, messagesWithSenders, userResponse.data);
-      })
+    // Transform without fetching messages (list view optimization)
+    return issuesArray.map((issue) =>
+      transformBackendIssue(issue, [], userData)
     );
-
-    return issues;
   },
 
-  // Get all issues (admin)
+  // Get all issues (admin) - list view, no messages for performance
   getAllIssues: async (status?: StatusFilter): Promise<Issue[]> => {
     const params: Record<string, string> = {};
     if (status && status !== 'all') {
@@ -254,18 +264,14 @@ export const issuesAPI = {
 
     const issuesArray = getResultsArray(response.data);
 
-    // Fetch messages with sender details and reporter details for each issue
-    const issues = await Promise.all(
-      issuesArray.map(async (issue) => {
-        const [messagesWithSenders, userResponse] = await Promise.all([
-          fetchMessagesWithSenders(issue.id),
-          apiClient.get<BackendUser>(`/users/${issue.reported_by}/`),
-        ]);
-        return transformBackendIssue(issue, messagesWithSenders, userResponse.data);
-      })
-    );
+    // Get unique user IDs and fetch with caching
+    const uniqueUserIds = [...new Set(issuesArray.map((issue) => issue.reported_by))];
+    await Promise.all(uniqueUserIds.map((userId) => fetchUserCached(userId)));
 
-    return issues;
+    // Transform issues using cached user data
+    return issuesArray.map((issue) =>
+      transformBackendIssue(issue, [], userCache.get(issue.reported_by))
+    );
   },
 
   // Get single issue with details
@@ -273,13 +279,13 @@ export const issuesAPI = {
     const issueResponse = await apiClient.get<BackendIssue>(`/issues/${issueId}/`);
     const issue = issueResponse.data;
 
-    // Fetch messages with sender details and reporter details in parallel
-    const [messagesWithSenders, userResponse] = await Promise.all([
+    // Fetch messages with sender details and reporter details in parallel (cached)
+    const [messagesWithSenders, userData] = await Promise.all([
       fetchMessagesWithSenders(issue.id),
-      apiClient.get<BackendUser>(`/users/${issue.reported_by}/`),
+      fetchUserCached(issue.reported_by),
     ]);
 
-    return transformBackendIssue(issue, messagesWithSenders, userResponse.data);
+    return transformBackendIssue(issue, messagesWithSenders, userData);
   },
 
   // Create new issue
@@ -298,10 +304,10 @@ export const issuesAPI = {
       reported_by: userIdNum,
     });
 
-    // Fetch user details for the created issue
-    const userResponse = await apiClient.get<BackendUser>(`/users/${userId}/`);
+    // Fetch user details for the created issue (cached)
+    const userData = await fetchUserCached(userIdNum);
 
-    return transformBackendIssue(response.data, [], userResponse.data);
+    return transformBackendIssue(response.data, [], userData);
   },
 
   // Resolve issue (admin)
@@ -318,13 +324,13 @@ export const issuesAPI = {
       resolved_on: response.data.resolved_on || resolvedTimestamp,
     };
 
-    // Fetch reporter details and messages
-    const [messagesWithSenders, userResponse] = await Promise.all([
+    // Fetch reporter details and messages (cached)
+    const [messagesWithSenders, userData] = await Promise.all([
       fetchMessagesWithSenders(issueData.id),
-      apiClient.get<BackendUser>(`/users/${issueData.reported_by}/`),
+      fetchUserCached(issueData.reported_by),
     ]);
 
-    return transformBackendIssue(issueData, messagesWithSenders, userResponse.data);
+    return transformBackendIssue(issueData, messagesWithSenders, userData);
   },
 
   // Reopen issue (admin)
@@ -334,13 +340,13 @@ export const issuesAPI = {
       resolved_on: null,
     });
 
-    // Fetch reporter details and messages
-    const [messagesWithSenders, userResponse] = await Promise.all([
+    // Fetch reporter details and messages (cached)
+    const [messagesWithSenders, userData] = await Promise.all([
       fetchMessagesWithSenders(response.data.id),
-      apiClient.get<BackendUser>(`/users/${response.data.reported_by}/`),
+      fetchUserCached(response.data.reported_by),
     ]);
 
-    return transformBackendIssue(response.data, messagesWithSenders, userResponse.data);
+    return transformBackendIssue(response.data, messagesWithSenders, userData);
   },
 };
 

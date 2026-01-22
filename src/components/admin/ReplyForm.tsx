@@ -14,15 +14,17 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { replySchema, type ReplyFormData } from '@/lib/validations';
+import { formatDateTime } from '@/lib/utils';
 
 interface ReplyFormProps {
   onReply: (message: string) => Promise<void>;
   onResolve: () => Promise<void>;
   onReopen?: () => Promise<void>;
   isResolved: boolean;
+  resolvedAt?: string;
 }
 
-export function ReplyForm({ onReply, onResolve, onReopen, isResolved }: ReplyFormProps) {
+export function ReplyForm({ onReply, onResolve, onReopen, isResolved, resolvedAt }: ReplyFormProps) {
   const [isReplying, setIsReplying] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
@@ -69,6 +71,11 @@ export function ReplyForm({ onReply, onResolve, onReopen, isResolved }: ReplyFor
         <div>
           <CheckCircle className="h-5 w-5 text-success mx-auto mb-2" />
           This issue has been resolved
+          {resolvedAt && (
+            <div className="text-xs mt-1">
+              on {formatDateTime(resolvedAt)}
+            </div>
+          )}
         </div>
         {onReopen && (
           <Button

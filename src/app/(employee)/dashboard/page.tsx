@@ -9,6 +9,7 @@ import { CreateIssueModal } from '@/components/employee/CreateIssueModal';
 import { IssueDetailsModal } from '@/components/employee/IssueDetailsModal';
 import { Button } from '@/components/ui/button';
 import { useIssues } from '@/hooks/useIssues';
+import { issuesAPI } from '@/lib/api';
 import type { Issue } from '@/lib/types';
 
 export default function EmployeeDashboard() {
@@ -16,10 +17,22 @@ export default function EmployeeDashboard() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
-  const handleIssueClick = (issue: Issue) => {
-    setSelectedIssue(issue);
+  const handleIssueClick = async (issue: Issue) => {
+    setSelectedIssue(issue); // Show immediately with basic info
     setDetailsModalOpen(true);
+
+    // Fetch full details (including messages) in background
+    setLoadingDetails(true);
+    try {
+      const fullIssue = await issuesAPI.getIssue(issue.id);
+      setSelectedIssue(fullIssue);
+    } catch (error) {
+      console.error('Failed to fetch issue details:', error);
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   const handleCreateIssue = async (title: string, description: string) => {

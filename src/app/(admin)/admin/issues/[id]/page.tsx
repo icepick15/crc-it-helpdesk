@@ -168,6 +168,7 @@ export default function AdminIssueDetails() {
               onResolve={handleResolve}
               onReopen={handleReopen}
               isResolved={issue.status === 'completed'}
+              resolvedAt={issue.resolvedAt}
             />
           </CardContent>
         </Card>

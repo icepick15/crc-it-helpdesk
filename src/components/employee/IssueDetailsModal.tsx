@@ -166,6 +166,11 @@ export function IssueDetailsModal({
         {issue.status === 'completed' && (
           <div className="text-center py-2 text-sm text-muted-foreground bg-success/10 rounded-lg">
             This issue has been resolved
+            {issue.resolvedAt && (
+              <span className="block text-xs mt-1">
+                on {formatDateTime(issue.resolvedAt)}
+              </span>
+            )}
           </div>
         )}
       </DialogContent>
