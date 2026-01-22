@@ -143,7 +143,10 @@ export const authAPI = {
       params: { email },
     });
 
-    const backendUser = usersResponse.data.results.find(u => u.email === email);
+    // Handle both paginated response (results array) and direct array response
+    const usersData = usersResponse.data.results || usersResponse.data;
+    const usersArray = Array.isArray(usersData) ? usersData : [];
+    const backendUser = usersArray.find((u: BackendUser) => u.email === email);
 
     if (!backendUser) {
       throw new Error('User not found');
