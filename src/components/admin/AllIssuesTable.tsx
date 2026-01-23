@@ -90,7 +90,7 @@ export function AllIssuesTable({
                 <TableCell className="text-center">
                   <div className="flex items-center justify-center gap-1 text-muted-foreground">
                     <MessageSquare className="h-4 w-4" />
-                    <span>{issue.replies.length}</span>
+                    <span>{issue.replyCount}</span>
                   </div>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
@@ -122,7 +122,7 @@ export function AllIssuesTable({
               </div>
               <div className="flex items-center gap-1 text-muted-foreground text-sm">
                 <MessageSquare className="h-3.5 w-3.5" />
-                <span>{issue.replies.length}</span>
+                <span>{issue.replyCount}</span>
               </div>
             </div>
             <h3 className="font-medium mb-1 line-clamp-1">{issue.title}</h3>

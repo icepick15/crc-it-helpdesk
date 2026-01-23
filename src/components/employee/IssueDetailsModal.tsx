@@ -74,6 +74,11 @@ export function IssueDetailsModal({
           <p className="text-sm text-muted-foreground">
             Created on {formatDateTime(issue.createdAt)}
           </p>
+          {issue.resolvedAt && (
+            <p className="text-sm text-green-600">
+              Resolved on {formatDateTime(issue.resolvedAt)}
+            </p>
+          )}
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 py-4">

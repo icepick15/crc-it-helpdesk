@@ -106,6 +106,7 @@ function transformBackendIssue(
       : 'Unknown',
     employeeEmail: reporterUser?.email || '',
     replies: messages.map(transformBackendMessage),
+    replyCount: backendIssue.conversations?.length ?? messages.length,
   };
 }
 

@@ -32,6 +32,7 @@ export interface BackendIssue {
   resolved_on: string | null;
   reported_by: number;
   reported_by_details?: BackendUser;
+  conversations?: BackendMessage[];
 }
 
 export interface BackendMessage {
@@ -76,6 +77,7 @@ export interface Issue {
   employeeName: string;
   employeeEmail: string;
   replies: Reply[];
+  replyCount: number;
 }
 
 export interface AdminStats {
