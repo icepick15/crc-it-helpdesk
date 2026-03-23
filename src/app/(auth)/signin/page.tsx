@@ -1,94 +1,80 @@
 import Image from 'next/image';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SignInForm } from '@/components/auth/SignInForm';
 
 export default function SignInPage() {
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:flex-1 bg-primary items-center justify-center p-12">
-        <div className="max-w-md text-primary-foreground">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center p-2">
-              <Image
-                src="/crclogo.svg"
-                alt="CRC Logo"
-                width={56}
-                height={56}
-                className="object-contain"
-              />
-            </div>
-            <span className="text-2xl font-bold">IT Helpdesk</span>
-          </div>
-          <h1 className="text-4xl font-bold mb-4">
-            Get IT Support, Fast
-          </h1>
-          <p className="text-lg text-primary-foreground/80 mb-8">
-            Report technical issues, track progress, and communicate directly with our IT team. We&apos;re here to help you stay productive.
-          </p>
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold">Quick Issue Submission</h3>
-                <p className="text-sm text-primary-foreground/70">Create tickets in seconds with our simple form</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold">Real-time Updates</h3>
-                <p className="text-sm text-primary-foreground/70">Track your ticket status and communicate with IT staff</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold">Issue History</h3>
-                <p className="text-sm text-primary-foreground/70">Access your complete support history anytime</p>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[oklch(0.20_0.06_255)]">
+
+      {/* Background subtle pattern */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-[oklch(0.35_0.08_255)] opacity-30 blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-[oklch(0.28_0.07_265)] opacity-30 blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[oklch(0.25_0.05_255)] opacity-20 blur-3xl" />
       </div>
 
-      {/* Right Panel - Sign In Form */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 bg-background">
-        <Card className="w-full max-w-md border-0 shadow-none sm:border sm:shadow-sm">
-          <CardHeader className="space-y-1 text-center">
-            <div className="flex justify-center mb-4 lg:hidden">
-              <div className="w-20 h-20 bg-white rounded-xl flex items-center justify-center p-2 border">
+      {/* Card */}
+      <div className="relative z-10 w-full max-w-sm mx-4">
+        <div className="bg-card rounded-2xl shadow-2xl border border-white/10 overflow-hidden">
+
+          {/* Top accent bar */}
+          <div className="h-1 w-full bg-gradient-to-r from-[oklch(0.40_0.10_255)] via-[oklch(0.55_0.12_255)] to-[oklch(0.40_0.10_255)]" />
+
+          <div className="px-8 py-10 flex flex-col items-center gap-6">
+
+            {/* Logo */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg p-2">
                 <Image
                   src="/crclogo.svg"
                   alt="CRC Logo"
-                  width={64}
-                  height={64}
+                  width={48}
+                  height={48}
                   className="object-contain"
                 />
               </div>
+              <div className="text-center">
+                <h1 className="text-xl font-bold text-foreground tracking-tight">
+                  CRC IT Helpdesk
+                </h1>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  CRC Credit Bureau Limited
+                </p>
+              </div>
             </div>
-            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-            <CardDescription>
-              Sign in to your account to continue
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SignInForm />
-          </CardContent>
-        </Card>
+
+            {/* Divider */}
+            <div className="w-full h-px bg-border" />
+
+            {/* Sign in section */}
+            <div className="w-full flex flex-col items-center gap-3">
+              <div className="text-center">
+                <p className="text-sm font-medium text-foreground">Welcome back</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Use your CRC Microsoft account to continue
+                </p>
+              </div>
+              <div className="w-full">
+                <SignInForm />
+              </div>
+            </div>
+
+          </div>
+
+          {/* Footer */}
+          <div className="px-8 py-4 bg-muted/50 border-t border-border flex items-center justify-center">
+            <p className="text-xs text-muted-foreground">
+              IT Support &bull; <span className="font-medium text-foreground/60">helpdesk@creditreferencenigeria.net</span>
+            </p>
+          </div>
+
+        </div>
+
+        {/* Below card */}
+        <p className="text-center text-xs text-white/30 mt-6">
+          &copy; {new Date().getFullYear()} CRC Credit Bureau Limited. All rights reserved.
+        </p>
       </div>
+
     </div>
   );
 }

@@ -4,7 +4,7 @@ export const msalConfig: Configuration = {
   auth: {
     clientId: process.env.NEXT_PUBLIC_AZURE_CLIENT_ID || '',
     authority: 'https://login.microsoftonline.com/organizations',
-    redirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI || 'http://localhost:3000',
+    redirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI || '',
   },
   cache: {
     cacheLocation: 'localStorage',
