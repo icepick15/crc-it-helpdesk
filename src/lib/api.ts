@@ -210,6 +210,27 @@ export const authAPI = {
     return { user, token: access };
   },
 
+  // Exchange a Microsoft ID token for a Django JWT then pull the user from the backend.
+  microsoftSignIn: async (idToken: string): Promise<{ user: User; token: string }> => {
+    const tokenResponse = await apiClient.post<BackendTokenResponse>('/auth/microsoft/', {
+      id_token: idToken,
+      subdomain: 'crccreditbureau',
+    });
+
+    const { access, refresh } = tokenResponse.data;
+
+    localStorage.setItem('token', access);
+    localStorage.setItem('refresh_token', refresh);
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${access}`;
+
+    // Decode the Django JWT to get user_id, then pull the full user record from backend
+    const payload = decodeJwtPayload(access);
+    const backendUser = await fetchUserCached(payload.user_id);
+    const user = transformBackendUser(backendUser);
+
+    return { user, token: access };
+  },
+
   refreshToken: async (): Promise<string> => {
     const refreshToken = localStorage.getItem('refresh_token');
     if (!refreshToken) {

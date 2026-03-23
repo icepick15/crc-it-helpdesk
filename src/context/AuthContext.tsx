@@ -18,6 +18,7 @@ interface AuthContextType {
   role: UserRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithMicrosoft: (idToken: string) => Promise<void>;
   signOut: () => void;
 }
 
@@ -68,6 +69,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [router]
   );
 
+  const signInWithMicrosoft = useCallback(
+    async (idToken: string) => {
+      setLoading(true);
+      try {
+        const { user: userData, token } = await authAPI.microsoftSignIn(idToken);
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+        if (userData.role === 'admin') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/dashboard');
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [router]
+  );
+
   const signOut = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('refresh_token');
@@ -82,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: user?.role || null,
     loading,
     signIn,
+    signInWithMicrosoft,
     signOut,
   };
 
