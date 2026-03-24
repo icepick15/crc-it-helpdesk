@@ -23,13 +23,13 @@ export default function SignInPage() {
 
             {/* Logo */}
             <div className="flex flex-col items-center gap-3">
-              <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-lg p-2">
+              <div className="w-20 h-20 rounded-2xl bg-white flex items-center justify-center shadow-lg overflow-hidden">
                 <Image
-                  src="/crclogo.svg"
+                  src="/crc-icon.png"
                   alt="CRC Logo"
-                  width={48}
-                  height={48}
-                  className="object-contain"
+                  width={80}
+                  height={80}
+                  className="object-cover w-full h-full"
                 />
               </div>
               <div className="text-center">

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMsal } from '@azure/msal-react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,8 +10,16 @@ import { loginRequest } from '@/lib/msalConfig';
 
 export function SignInForm() {
   const { instance } = useMsal();
-  const { signInWithMicrosoft } = useAuth();
+  const { signInWithMicrosoft, isAuthenticated, role } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  // Redirect if already signed in
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace(role === 'admin' ? '/admin/dashboard' : '/dashboard');
+    }
+  }, [isAuthenticated, role, router]);
 
   async function handleSignIn() {
     setIsLoading(true);
