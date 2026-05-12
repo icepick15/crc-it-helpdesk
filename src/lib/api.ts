@@ -15,11 +15,13 @@ import type {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://helpdesk-api-92j8.onrender.com/api';
 
+const isNgrok = API_BASE_URL.includes('ngrok');
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true',
+    ...(isNgrok && { 'ngrok-skip-browser-warning': 'true' }),
   },
 });
 
