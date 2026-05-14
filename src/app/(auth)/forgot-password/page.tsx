@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
                 className="object-contain"
               />
             </div>
-            <span className="text-2xl font-bold">IT Helpdesk</span>
+            <span className="text-2xl font-bold">IT Service Desk</span>
           </div>
           <h1 className="text-4xl font-bold mb-4">
             Forgot Your Password?

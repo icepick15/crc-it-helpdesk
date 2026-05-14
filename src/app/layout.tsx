@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "IT Helpdesk",
-  description: "IT Helpdesk Ticketing System",
+  title: "IT Service Desk",
+  description: "IT Service Desk Ticketing System",
 };
 
 export default function RootLayout({

@@ -41,10 +41,10 @@ function formatDateForExcel(dateString: string): string {
 
 async function generateExcel(issues: Issue[], statusFilter: string): Promise<Blob> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'CRC IT Helpdesk';
+  workbook.creator = 'CRC IT Service Desk';
   workbook.created = new Date();
 
-  const worksheet = workbook.addWorksheet('IT Helpdesk Report', {
+  const worksheet = workbook.addWorksheet('IT Service Desk Report', {
     views: [{ state: 'frozen', ySplit: 1 }], // Freeze header row
   });
 

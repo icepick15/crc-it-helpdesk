@@ -34,7 +34,7 @@ export default function SignInPage() {
               </div>
               <div className="text-center">
                 <h1 className="text-xl font-bold text-foreground tracking-tight">
-                  CRC IT Helpdesk
+                  CRC IT Service Desk
                 </h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   CRC Credit Bureau Limited
