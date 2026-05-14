@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { LogOut, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useMsal } from '@azure/msal-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,6 +17,15 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export function Navbar() {
   const { user, signOut } = useAuth();
+  const { instance } = useMsal();
+
+  async function handleSignOut() {
+    const accounts = instance.getAllAccounts();
+    if (accounts.length > 0) {
+      await instance.logoutPopup({ account: accounts[0] });
+    }
+    signOut();
+  }
 
   const initials = user?.name
     ? user.name
@@ -30,7 +40,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-120 h-20 bg-white rounded-lg flex items-center justify-left p-1">
+          <div className="h-10 w-auto bg-white rounded-lg flex items-center justify-start p-1">
             <Image
               src="/crclogo.svg"
               alt="CRC Logo"
@@ -67,7 +77,7 @@ export function Navbar() {
               <span>Profile</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={signOut} className="text-destructive">
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Sign out</span>
             </DropdownMenuItem>
