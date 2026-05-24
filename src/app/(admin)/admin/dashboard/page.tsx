@@ -80,7 +80,7 @@ export default function AdminDashboard() {
           issues={filteredIssues}
           loading={loading}
           onIssueClick={handleIssueClick}
-          onClaim={claimIssue}
+          onClaim={(id) => claimIssue(id).then(() => undefined)}
         />
       </div>
 
