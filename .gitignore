@@ -40,6 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# backend (Django - hosted separately)
-/backend
+# backend Python/Django artifacts
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/db.sqlite3
 
