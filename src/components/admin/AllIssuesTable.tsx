@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Inbox, MessageSquare } from 'lucide-react';
+import { Loader2, Inbox, MessageSquare, UserCheck } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { formatDate } from '@/lib/utils';
 import type { Issue } from '@/lib/types';
@@ -17,12 +18,14 @@ interface AllIssuesTableProps {
   issues: Issue[];
   loading: boolean;
   onIssueClick: (issue: Issue) => void;
+  onClaim?: (issueId: string) => Promise<void>;
 }
 
 export function AllIssuesTable({
   issues,
   loading,
   onIssueClick,
+  onClaim,
 }: AllIssuesTableProps) {
   if (loading) {
     return (
@@ -44,6 +47,19 @@ export function AllIssuesTable({
     );
   }
 
+  function AssigneeBadge({ issue }: { issue: Issue }) {
+    if (issue.assignedToName) {
+      return (
+        <span className="text-sm font-medium text-foreground">{issue.assignedToName}</span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300">
+        Unassigned
+      </span>
+    );
+  }
+
   return (
     <>
       {/* Desktop Table View */}
@@ -53,11 +69,12 @@ export function AllIssuesTable({
             <TableRow className="bg-muted/50">
               <TableHead className="w-[70px] min-w-[70px]">ID</TableHead>
               <TableHead className="min-w-[200px]">Title</TableHead>
-              <TableHead className="w-[200px] min-w-[180px]">Employee</TableHead>
+              <TableHead className="w-[180px] min-w-[160px]">Employee</TableHead>
               <TableHead className="w-[110px] min-w-[100px]">Status</TableHead>
-              <TableHead className="w-[90px] min-w-[80px] text-center">Replies</TableHead>
-              <TableHead className="w-[120px] min-w-[110px]">Created</TableHead>
-              <TableHead className="w-[120px] min-w-[110px]">Resolved</TableHead>
+              <TableHead className="w-[160px] min-w-[140px]">Assigned To</TableHead>
+              <TableHead className="w-[80px] min-w-[70px] text-center">Replies</TableHead>
+              <TableHead className="w-[110px] min-w-[100px]">Created</TableHead>
+              <TableHead className="w-[110px] min-w-[100px]">Resolved</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -71,10 +88,10 @@ export function AllIssuesTable({
                   #{issue.id}
                 </TableCell>
                 <TableCell>
-                  <div className="font-medium truncate max-w-[400px] lg:max-w-[500px] xl:max-w-[600px]">
+                  <div className="font-medium truncate max-w-[320px] lg:max-w-[420px]">
                     {issue.title}
                   </div>
-                  <div className="text-sm text-muted-foreground truncate max-w-[400px] lg:max-w-[500px] xl:max-w-[600px]">
+                  <div className="text-sm text-muted-foreground truncate max-w-[320px] lg:max-w-[420px]">
                     {issue.description}
                   </div>
                 </TableCell>
@@ -86,6 +103,24 @@ export function AllIssuesTable({
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={issue.status} />
+                </TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  {!issue.assignedToName && onClaim ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs border-amber-400/50 text-amber-700 hover:bg-amber-50 gap-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClaim(issue.id);
+                      }}
+                    >
+                      <UserCheck className="h-3.5 w-3.5" />
+                      Claim
+                    </Button>
+                  ) : (
+                    <AssigneeBadge issue={issue} />
+                  )}
                 </TableCell>
                 <TableCell className="text-center">
                   <div className="flex items-center justify-center gap-1 text-muted-foreground">
@@ -129,21 +164,36 @@ export function AllIssuesTable({
             <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
               {issue.description}
             </p>
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-sm gap-2">
               <div>
                 <span className="font-medium">{issue.employeeName}</span>
-                <span className="text-muted-foreground ml-1 hidden sm:inline">
-                  ({issue.employeeEmail})
-                </span>
               </div>
-              <div className="text-right text-muted-foreground">
-                <div>{formatDate(issue.createdAt)}</div>
-                {issue.resolvedAt && (
-                  <div className="text-xs text-green-600">
-                    Resolved: {formatDate(issue.resolvedAt)}
-                  </div>
+              <div className="flex items-center gap-2">
+                {!issue.assignedToName && onClaim ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs border-amber-400/50 text-amber-700 hover:bg-amber-50 gap-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClaim(issue.id);
+                    }}
+                  >
+                    <UserCheck className="h-3.5 w-3.5" />
+                    Claim
+                  </Button>
+                ) : (
+                  <AssigneeBadge issue={issue} />
                 )}
               </div>
+            </div>
+            <div className="text-xs text-muted-foreground mt-2">
+              {formatDate(issue.createdAt)}
+              {issue.resolvedAt && (
+                <span className="text-green-600 ml-2">
+                  Resolved: {formatDate(issue.resolvedAt)}
+                </span>
+              )}
             </div>
           </div>
         ))}

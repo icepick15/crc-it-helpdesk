@@ -14,4 +14,5 @@ export const msalConfig: Configuration = {
 
 export const loginRequest: PopupRequest = {
   scopes: ['User.Read', 'openid', 'profile', 'email'],
+  prompt: 'select_account',
 };

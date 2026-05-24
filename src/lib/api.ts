@@ -93,6 +93,8 @@ function transformBackendIssue(
   reporter?: BackendUser
 ): Issue {
   const reporterUser = backendIssue.reported_by_details || reporter;
+  const assignee = backendIssue.assigned_to_details;
+  const resolver = backendIssue.resolved_by_details;
 
   return {
     id: String(backendIssue.id),
@@ -109,6 +111,14 @@ function transformBackendIssue(
     employeeEmail: reporterUser?.email || '',
     replies: messages.map(transformBackendMessage),
     replyCount: backendIssue.conversations?.length ?? messages.length,
+    assignedToId: backendIssue.assigned_to != null ? String(backendIssue.assigned_to) : null,
+    assignedToName: assignee
+      ? `${assignee.first_name} ${assignee.last_name}`.trim() || assignee.email
+      : null,
+    resolvedById: backendIssue.resolved_by != null ? String(backendIssue.resolved_by) : null,
+    resolvedByName: resolver
+      ? `${resolver.first_name} ${resolver.last_name}`.trim() || resolver.email
+      : null,
   };
 }
 
@@ -334,42 +344,52 @@ export const issuesAPI = {
     return transformBackendIssue(response.data, [], userData);
   },
 
-  // Resolve issue (admin)
-  resolveIssue: async (issueId: string): Promise<Issue> => {
-    const resolvedTimestamp = new Date().toISOString();
+  // Claim an unassigned issue (admin)
+  claimIssue: async (issueId: string): Promise<Issue> => {
     const response = await apiClient.patch<BackendIssue>(`/issues/${issueId}/`, {
-      status: 'completed',
-      resolved_on: resolvedTimestamp,
+      action: 'claim',
     });
-
-    // Ensure resolved_on is set (use our timestamp if backend doesn't return it)
-    const issueData = {
-      ...response.data,
-      resolved_on: response.data.resolved_on || resolvedTimestamp,
-    };
-
-    // Fetch reporter details and messages (cached)
     const [messagesWithSenders, userData] = await Promise.all([
-      fetchMessagesWithSenders(issueData.id),
-      fetchUserCached(issueData.reported_by),
+      fetchMessagesWithSenders(response.data.id),
+      fetchUserCached(response.data.reported_by),
     ]);
+    return transformBackendIssue(response.data, messagesWithSenders, userData);
+  },
 
-    return transformBackendIssue(issueData, messagesWithSenders, userData);
+  // Transfer issue to another IT admin (current assignee only)
+  transferIssue: async (issueId: string, newUserId: string): Promise<Issue> => {
+    const response = await apiClient.patch<BackendIssue>(`/issues/${issueId}/`, {
+      action: 'transfer',
+      assigned_to: parseInt(newUserId, 10),
+    });
+    const [messagesWithSenders, userData] = await Promise.all([
+      fetchMessagesWithSenders(response.data.id),
+      fetchUserCached(response.data.reported_by),
+    ]);
+    return transformBackendIssue(response.data, messagesWithSenders, userData);
+  },
+
+  // Resolve issue — only the assignee may call this
+  resolveIssue: async (issueId: string): Promise<Issue> => {
+    const response = await apiClient.patch<BackendIssue>(`/issues/${issueId}/`, {
+      action: 'resolve',
+    });
+    const [messagesWithSenders, userData] = await Promise.all([
+      fetchMessagesWithSenders(response.data.id),
+      fetchUserCached(response.data.reported_by),
+    ]);
+    return transformBackendIssue(response.data, messagesWithSenders, userData);
   },
 
   // Reopen issue (admin)
   reopenIssue: async (issueId: string): Promise<Issue> => {
     const response = await apiClient.patch<BackendIssue>(`/issues/${issueId}/`, {
       status: 'pending',
-      resolved_on: null,
     });
-
-    // Fetch reporter details and messages (cached)
     const [messagesWithSenders, userData] = await Promise.all([
       fetchMessagesWithSenders(response.data.id),
       fetchUserCached(response.data.reported_by),
     ]);
-
     return transformBackendIssue(response.data, messagesWithSenders, userData);
   },
 };
@@ -441,6 +461,15 @@ export const usersAPI = {
     const response = await apiClient.get<BackendPaginatedResponse<BackendUser>>('/users/');
     const usersArray = getResultsArray(response.data);
     return usersArray.map(transformBackendUser);
+  },
+
+  // Get all admin/IT users for the transfer dropdown
+  getAdminUsers: async (): Promise<User[]> => {
+    const response = await apiClient.get<BackendPaginatedResponse<BackendUser>>('/users/');
+    const usersArray = getResultsArray(response.data);
+    return usersArray
+      .filter((u) => u.role === 'admin')
+      .map(transformBackendUser);
   },
 };
 

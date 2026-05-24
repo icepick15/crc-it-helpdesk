@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { issuesAPI, messagesAPI, statsAPI } from '@/lib/api';
+import { issuesAPI, messagesAPI, statsAPI, usersAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import type { Issue, AdminStats, StatusFilter } from '@/lib/types';
+import type { Issue, AdminStats, StatusFilter, User } from '@/lib/types';
 
 export function useAdminIssues() {
   const { user } = useAuth();
@@ -104,7 +104,6 @@ export function useAdminIssues() {
           issue.id === issueId ? updatedIssue : issue
         )
       );
-      // Update stats
       setStats((prev) => ({
         ...prev,
         pending: prev.pending - 1,
@@ -117,6 +116,40 @@ export function useAdminIssues() {
       toast.error('Failed to resolve issue');
       throw error;
     }
+  };
+
+  const claimIssue = async (issueId: string) => {
+    try {
+      const updatedIssue = await issuesAPI.claimIssue(issueId);
+      setIssues((prev) =>
+        prev.map((issue) => (issue.id === issueId ? updatedIssue : issue))
+      );
+      toast.success('Issue claimed successfully');
+      return updatedIssue;
+    } catch (error) {
+      console.error('Failed to claim issue:', error);
+      toast.error('Failed to claim issue');
+      throw error;
+    }
+  };
+
+  const transferIssue = async (issueId: string, newUserId: string) => {
+    try {
+      const updatedIssue = await issuesAPI.transferIssue(issueId, newUserId);
+      setIssues((prev) =>
+        prev.map((issue) => (issue.id === issueId ? updatedIssue : issue))
+      );
+      toast.success('Issue transferred successfully');
+      return updatedIssue;
+    } catch (error) {
+      console.error('Failed to transfer issue:', error);
+      toast.error('Failed to transfer issue');
+      throw error;
+    }
+  };
+
+  const getAdminUsers = async (): Promise<User[]> => {
+    return usersAPI.getAdminUsers();
   };
 
   const getIssueById = (id: string) => {
@@ -145,6 +178,9 @@ export function useAdminIssues() {
     setMonthFilter,
     replyToIssue,
     resolveIssue,
+    claimIssue,
+    transferIssue,
+    getAdminUsers,
     getIssueById,
     refetch,
     refetchStats,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { IssueConversation } from '@/components/admin/IssueConversation';
@@ -25,6 +25,9 @@ export default function AdminIssueDetails() {
   const [showUserProfile, setShowUserProfile] = useState(false);
 
   const issueId = params.id as string;
+
+  const isUnassigned = issue?.assignedToId == null;
+  const isAssignee = !isUnassigned && issue?.assignedToId === user?.id;
 
   useEffect(() => {
     async function fetchIssue() {
@@ -54,13 +57,34 @@ export default function AdminIssueDetails() {
         name: user.name,
         role: user.role,
       });
-      setIssue({
-        ...issue,
-        replies: [...issue.replies, reply],
-      });
+      setIssue({ ...issue, replies: [...issue.replies, reply] });
       toast.success('Reply sent successfully');
     } catch (error) {
       toast.error('Failed to send reply');
+      throw error;
+    }
+  };
+
+  const handleClaim = async () => {
+    if (!issue) return;
+    try {
+      const updated = await issuesAPI.claimIssue(issue.id);
+      setIssue(updated);
+      toast.success('Issue claimed — you are now the assignee');
+    } catch (error) {
+      toast.error('Failed to claim issue');
+      throw error;
+    }
+  };
+
+  const handleTransfer = async (newUserId: string) => {
+    if (!issue) return;
+    try {
+      const updated = await issuesAPI.transferIssue(issue.id, newUserId);
+      setIssue(updated);
+      toast.success('Issue transferred successfully');
+    } catch (error) {
+      toast.error('Failed to transfer issue');
       throw error;
     }
   };
@@ -137,9 +161,31 @@ export default function AdminIssueDetails() {
                   </button>{' '}
                   on {formatDateTime(issue.createdAt)}
                 </div>
+
+                {/* Assignee row */}
+                <div className="flex items-center gap-1.5 text-sm">
+                  <UserCheck className="h-4 w-4 text-muted-foreground" />
+                  {issue.assignedToName ? (
+                    <span>
+                      Assigned to{' '}
+                      <span className="font-medium text-foreground">
+                        {issue.assignedToName}
+                        {isAssignee && ' (you)'}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-amber-600 font-medium">Unassigned</span>
+                  )}
+                </div>
+
+                {/* Resolved row */}
                 {issue.resolvedAt && (
                   <div className="text-sm text-green-600">
-                    Resolved on {formatDateTime(issue.resolvedAt)}
+                    Resolved
+                    {issue.resolvedByName && (
+                      <span> by <span className="font-medium">{issue.resolvedByName}</span></span>
+                    )}
+                    {' '}on {formatDateTime(issue.resolvedAt)}
                   </div>
                 )}
               </div>
@@ -157,18 +203,27 @@ export default function AdminIssueDetails() {
           </CardContent>
         </Card>
 
-        {/* Reply Form */}
+        {/* Reply / Action Form */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Reply</CardTitle>
+            <CardTitle className="text-lg">
+              {isUnassigned ? 'Claim Issue' : isAssignee ? 'Reply' : 'Issue Status'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <ReplyForm
               onReply={handleReply}
               onResolve={handleResolve}
               onReopen={handleReopen}
+              onClaim={isUnassigned ? handleClaim : undefined}
+              onTransfer={isAssignee ? handleTransfer : undefined}
               isResolved={issue.status === 'completed'}
+              isAssignee={isAssignee}
+              isUnassigned={isUnassigned}
+              currentAssigneeId={issue.assignedToId ?? undefined}
               resolvedAt={issue.resolvedAt}
+              resolvedByName={issue.resolvedByName}
+              assignedToName={issue.assignedToName}
             />
           </CardContent>
         </Card>

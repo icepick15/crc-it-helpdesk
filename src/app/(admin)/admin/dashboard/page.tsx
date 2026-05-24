@@ -23,6 +23,7 @@ export default function AdminDashboard() {
     statsLoading,
     filter,
     setFilter,
+    claimIssue,
   } = useAdminIssues();
 
   // Filter issues based on search query
@@ -79,6 +80,7 @@ export default function AdminDashboard() {
           issues={filteredIssues}
           loading={loading}
           onIssueClick={handleIssueClick}
+          onClaim={claimIssue}
         />
       </div>
 
