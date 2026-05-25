@@ -21,6 +21,7 @@ export interface BackendUser {
   department: string;
   floor: string;
   created_at: string;
+  is_superuser?: boolean;
 }
 
 export interface BackendIssue {

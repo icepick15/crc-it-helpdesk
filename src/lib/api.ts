@@ -463,12 +463,14 @@ export const usersAPI = {
     return usersArray.map(transformBackendUser);
   },
 
-  // Get all admin/IT users for the transfer dropdown
+  // Get all admin/IT users for the transfer dropdown (excludes superusers)
   getAdminUsers: async (): Promise<User[]> => {
-    const response = await apiClient.get<BackendPaginatedResponse<BackendUser>>('/users/');
+    const response = await apiClient.get<BackendPaginatedResponse<BackendUser>>('/users/', {
+      params: { role: 'admin' },
+    });
     const usersArray = getResultsArray(response.data);
     return usersArray
-      .filter((u) => u.role === 'admin')
+      .filter((u) => !u.is_superuser)
       .map(transformBackendUser);
   },
 };
