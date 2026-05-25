@@ -39,6 +39,18 @@ export function useIssues() {
     fetchIssues();
   }, [user?.id, filter, fetchIssues]);
 
+  // Refetch when the tab becomes visible again (picks up status changes made by admins)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        fetchedRef.current = null;
+        fetchIssues();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [fetchIssues]);
+
   const createIssue = async (title: string, description: string) => {
     if (!user?.id) {
       toast.error('You must be logged in to create an issue');

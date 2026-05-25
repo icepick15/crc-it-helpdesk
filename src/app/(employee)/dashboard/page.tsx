@@ -9,11 +9,10 @@ import { CreateIssueModal } from '@/components/employee/CreateIssueModal';
 import { IssueDetailsModal } from '@/components/employee/IssueDetailsModal';
 import { Button } from '@/components/ui/button';
 import { useIssues } from '@/hooks/useIssues';
-import { issuesAPI } from '@/lib/api';
 import type { Issue } from '@/lib/types';
 
 export default function EmployeeDashboard() {
-  const { issues, loading, filter, setFilter, createIssue, replyToIssue } = useIssues();
+  const { issues, loading, filter, setFilter, createIssue, replyToIssue, refreshIssue } = useIssues();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -23,10 +22,10 @@ export default function EmployeeDashboard() {
     setSelectedIssue(issue); // Show immediately with basic info
     setDetailsModalOpen(true);
 
-    // Fetch full details (including messages) in background
+    // Fetch full details (including messages) — also updates the list
     setLoadingDetails(true);
     try {
-      const fullIssue = await issuesAPI.getIssue(issue.id);
+      const fullIssue = await refreshIssue(issue.id);
       setSelectedIssue(fullIssue);
     } catch (error) {
       console.error('Failed to fetch issue details:', error);
