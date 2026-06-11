@@ -463,14 +463,16 @@ export const usersAPI = {
     return usersArray.map(transformBackendUser);
   },
 
-  // Get all admin/IT users for the transfer dropdown (excludes superusers)
+  // Get all active admin/IT users for the transfer dropdown (excludes superusers)
   getAdminUsers: async (): Promise<User[]> => {
     const response = await apiClient.get<BackendPaginatedResponse<BackendUser>>('/users/', {
-      params: { role: 'admin' },
+      params: { role: 'admin', is_active: 'true' },
     });
     const usersArray = getResultsArray(response.data);
+    // Role check is repeated client-side (case-insensitively) in case the
+    // deployed backend ignores the role query param
     return usersArray
-      .filter((u) => !u.is_superuser)
+      .filter((u) => (u.role ?? '').toLowerCase() === 'admin' && !u.is_superuser)
       .map(transformBackendUser);
   },
 };
