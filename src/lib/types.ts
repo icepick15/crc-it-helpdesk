@@ -37,6 +37,7 @@ export interface BackendIssue {
   assigned_to_details?: BackendUser;
   resolved_by: number | null;
   resolved_by_details?: BackendUser;
+  conversation_count?: number;
   conversations?: BackendMessage[];
 }
 

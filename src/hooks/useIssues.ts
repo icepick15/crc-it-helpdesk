@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { issuesAPI, messagesAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -11,7 +11,6 @@ export function useIssues() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>('all');
-  const fetchedRef = useRef<string | null>(null);
 
   const fetchIssues = useCallback(async () => {
     if (!user?.id) return;
@@ -28,24 +27,15 @@ export function useIssues() {
     }
   }, [filter, user?.id]);
 
-  // Fetch issues only when user.id or filter actually changes
+  // Re-fetch whenever filter or user changes (fetchIssues identity captures both)
   useEffect(() => {
-    if (!user?.id) return;
-
-    const fetchKey = `${user.id}-${filter}`;
-    if (fetchedRef.current === fetchKey) return;
-
-    fetchedRef.current = fetchKey;
     fetchIssues();
-  }, [user?.id, filter, fetchIssues]);
+  }, [fetchIssues]);
 
   // Refetch when the tab becomes visible again (picks up status changes made by admins)
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible') {
-        fetchedRef.current = null;
-        fetchIssues();
-      }
+      if (document.visibilityState === 'visible') fetchIssues();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
@@ -110,9 +100,7 @@ export function useIssues() {
     }
   };
 
-  // Manual refetch that bypasses the duplicate check
   const refetch = useCallback(() => {
-    fetchedRef.current = null;
     fetchIssues();
   }, [fetchIssues]);
 

@@ -110,7 +110,7 @@ function transformBackendIssue(
       : 'Unknown',
     employeeEmail: reporterUser?.email || '',
     replies: messages.map(transformBackendMessage),
-    replyCount: backendIssue.conversations?.length ?? messages.length,
+    replyCount: backendIssue.conversation_count ?? backendIssue.conversations?.length ?? messages.length,
     assignedToId: backendIssue.assigned_to != null ? String(backendIssue.assigned_to) : null,
     assignedToName: assignee
       ? `${assignee.first_name} ${assignee.last_name}`.trim() || assignee.email
@@ -147,6 +147,9 @@ function getResultsArray<T>(data: { results?: T[] } | T[]): T[] {
 
 // Simple user cache to avoid duplicate fetches
 const userCache = new Map<number, BackendUser>();
+
+// Admin list rarely changes within a session — cache for the lifetime of the page
+let adminUsersCache: User[] | null = null;
 
 // Helper to fetch user with caching
 async function fetchUserCached(userId: number): Promise<BackendUser> {
@@ -267,59 +270,33 @@ export const issuesAPI = {
   // Get issues for current employee (list view - no messages for performance)
   getMyIssues: async (userId: string, status?: StatusFilter): Promise<Issue[]> => {
     const params: Record<string, string> = { reported_by: userId };
-    if (status && status !== 'all') {
-      params.status = status;
-    }
+    if (status && status !== 'all') params.status = status;
 
-    // Fetch issues and user details in parallel (user is cached)
-    const [issuesResponse, userData] = await Promise.all([
-      apiClient.get<BackendPaginatedResponse<BackendIssue>>('/issues/', { params }),
-      fetchUserCached(parseInt(userId, 10)),
-    ]);
-
-    const issuesArray = getResultsArray(issuesResponse.data);
-
-    // Transform without fetching messages (list view optimization)
-    return issuesArray.map((issue) =>
-      transformBackendIssue(issue, [], userData)
-    );
+    const response = await apiClient.get<BackendPaginatedResponse<BackendIssue>>('/issues/', { params });
+    const issuesArray = getResultsArray(response.data);
+    // reported_by_details is embedded in list response — no extra user fetches needed
+    return issuesArray.map((issue) => transformBackendIssue(issue, []));
   },
 
   // Get all issues (admin) - list view, no messages for performance
-  getAllIssues: async (status?: StatusFilter): Promise<Issue[]> => {
+  getAllIssues: async (status?: StatusFilter, month?: string): Promise<Issue[]> => {
     const params: Record<string, string> = {};
-    if (status && status !== 'all') {
-      params.status = status;
-    }
+    if (status && status !== 'all') params.status = status;
+    if (month) params.month = month;
 
-    const response = await apiClient.get<BackendPaginatedResponse<BackendIssue>>('/issues/', {
-      params,
-    });
-
+    const response = await apiClient.get<BackendPaginatedResponse<BackendIssue>>('/issues/', { params });
     const issuesArray = getResultsArray(response.data);
-
-    // Get unique user IDs and fetch with caching
-    const uniqueUserIds = [...new Set(issuesArray.map((issue) => issue.reported_by))];
-    await Promise.all(uniqueUserIds.map((userId) => fetchUserCached(userId)));
-
-    // Transform issues using cached user data
-    return issuesArray.map((issue) =>
-      transformBackendIssue(issue, [], userCache.get(issue.reported_by))
-    );
+    // reported_by_details and conversation_count are embedded — no extra fetches needed
+    return issuesArray.map((issue) => transformBackendIssue(issue, []));
   },
 
   // Get single issue with details
   getIssue: async (issueId: string): Promise<Issue> => {
     const issueResponse = await apiClient.get<BackendIssue>(`/issues/${issueId}/`);
     const issue = issueResponse.data;
-
-    // Fetch messages with sender details and reporter details in parallel (cached)
-    const [messagesWithSenders, userData] = await Promise.all([
-      fetchMessagesWithSenders(issue.id),
-      fetchUserCached(issue.reported_by),
-    ]);
-
-    return transformBackendIssue(issue, messagesWithSenders, userData);
+    // reported_by_details is embedded — only need to fetch messages separately
+    const messagesWithSenders = await fetchMessagesWithSenders(issue.id);
+    return transformBackendIssue(issue, messagesWithSenders);
   },
 
   // Create new issue
@@ -434,16 +411,9 @@ export const messagesAPI = {
 // ============ Stats API ============
 
 export const statsAPI = {
-  // Calculate stats from issues (no dedicated endpoint)
   getStats: async (): Promise<AdminStats> => {
-    const response = await apiClient.get<BackendPaginatedResponse<BackendIssue>>('/issues/');
-
-    const issues = getResultsArray(response.data);
-    const total = issues.length;
-    const pending = issues.filter(i => i.status === 'pending').length;
-    const completed = issues.filter(i => i.status === 'completed').length;
-
-    return { total, pending, completed };
+    const response = await apiClient.get<AdminStats>('/stats/');
+    return response.data;
   },
 };
 
@@ -465,15 +435,15 @@ export const usersAPI = {
 
   // Get all active admin/IT users for the transfer dropdown (excludes superusers)
   getAdminUsers: async (): Promise<User[]> => {
+    if (adminUsersCache) return adminUsersCache;
     const response = await apiClient.get<BackendPaginatedResponse<BackendUser>>('/users/', {
       params: { role: 'admin', is_active: 'true' },
     });
     const usersArray = getResultsArray(response.data);
-    // Role check is repeated client-side (case-insensitively) in case the
-    // deployed backend ignores the role query param
-    return usersArray
+    adminUsersCache = usersArray
       .filter((u) => (u.role ?? '').toLowerCase() === 'admin' && !u.is_superuser)
       .map(transformBackendUser);
+    return adminUsersCache;
   },
 };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { issuesAPI, messagesAPI, statsAPI, usersAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -14,8 +14,6 @@ export function useAdminIssues() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [monthFilter, setMonthFilter] = useState<string>('');
-  const fetchedRef = useRef<string | null>(null);
-  const statsFetchedRef = useRef(false);
 
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
@@ -33,17 +31,7 @@ export function useAdminIssues() {
   const fetchIssues = useCallback(async () => {
     setLoading(true);
     try {
-      let fetchedIssues = await issuesAPI.getAllIssues(filter);
-
-      // Apply month filter on client side if specified
-      if (monthFilter) {
-        fetchedIssues = fetchedIssues.filter((issue) => {
-          const issueDate = new Date(issue.createdAt);
-          const issueMonth = `${issueDate.getFullYear()}-${String(issueDate.getMonth() + 1).padStart(2, '0')}`;
-          return issueMonth === monthFilter;
-        });
-      }
-
+      const fetchedIssues = await issuesAPI.getAllIssues(filter, monthFilter || undefined);
       setIssues(fetchedIssues);
     } catch (error) {
       console.error('Failed to fetch issues:', error);
@@ -53,20 +41,15 @@ export function useAdminIssues() {
     }
   }, [filter, monthFilter]);
 
-  // Fetch stats only once on mount
+  // fetchStats has stable identity (no deps) — runs only on mount
   useEffect(() => {
-    if (statsFetchedRef.current) return;
-    statsFetchedRef.current = true;
     fetchStats();
   }, [fetchStats]);
 
-  // Fetch issues only when filter actually changes
+  // Re-fetch whenever filter or monthFilter changes (fetchIssues identity captures both)
   useEffect(() => {
-    const fetchKey = `${filter}-${monthFilter}`;
-    if (fetchedRef.current === fetchKey) return;
-    fetchedRef.current = fetchKey;
     fetchIssues();
-  }, [filter, monthFilter, fetchIssues]);
+  }, [fetchIssues]);
 
   const replyToIssue = async (issueId: string, message: string) => {
     if (!user?.id) {
@@ -156,14 +139,11 @@ export function useAdminIssues() {
     return issues.find((issue) => issue.id === id);
   };
 
-  // Manual refetch that bypasses the duplicate check
   const refetch = useCallback(() => {
-    fetchedRef.current = null;
     fetchIssues();
   }, [fetchIssues]);
 
   const refetchStats = useCallback(() => {
-    statsFetchedRef.current = false;
     fetchStats();
   }, [fetchStats]);
 
