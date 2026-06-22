@@ -14,7 +14,7 @@ export const createIssueSchema = z.object({
     .string()
     .min(10, 'Description must be at least 10 characters')
     .max(1000, 'Description must not exceed 1000 characters'),
-  severity: z.enum(['critical', 'high', 'low', 'minor']).default('low'),
+  severity: z.enum(['critical', 'high', 'low', 'minor']),
 });
 
 export const replySchema = z.object({
