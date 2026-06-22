@@ -2,6 +2,10 @@ export type UserRole = 'employee' | 'admin';
 
 export type IssueStatus = 'pending' | 'completed';
 
+export type IssueSeverity = 'critical' | 'high' | 'low' | 'minor';
+
+export type SLAStatus = 'on_track' | 'warning' | 'breached' | 'resolved';
+
 export interface User {
   id: string;
   email: string;
@@ -29,6 +33,7 @@ export interface BackendIssue {
   title: string;
   description: string;
   status: 'pending' | 'completed';
+  severity: IssueSeverity;
   created_at: string;
   resolved_on: string | null;
   reported_by: number;
@@ -39,6 +44,9 @@ export interface BackendIssue {
   resolved_by_details?: BackendUser;
   conversation_count?: number;
   conversations?: BackendMessage[];
+  sla_resolve_by: string | null;
+  sla_acknowledged: boolean | null;
+  sla_status: SLAStatus | null;
 }
 
 export interface BackendMessage {
@@ -76,6 +84,7 @@ export interface Issue {
   title: string;
   description: string;
   status: IssueStatus;
+  severity: IssueSeverity;
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
@@ -88,6 +97,9 @@ export interface Issue {
   assignedToName: string | null;
   resolvedById: string | null;
   resolvedByName: string | null;
+  slaResolveBy: string | null;
+  slaAcknowledged: boolean | null;
+  slaStatus: SLAStatus | null;
 }
 
 export interface AdminStats {
@@ -105,6 +117,7 @@ export interface SignInData {
 export interface CreateIssueData {
   title: string;
   description: string;
+  severity: IssueSeverity;
 }
 
 export interface ReplyData {

@@ -14,6 +14,7 @@ export const createIssueSchema = z.object({
     .string()
     .min(10, 'Description must be at least 10 characters')
     .max(1000, 'Description must not exceed 1000 characters'),
+  severity: z.enum(['critical', 'high', 'low', 'minor']).default('low'),
 });
 
 export const replySchema = z.object({
@@ -41,6 +42,7 @@ export const resetPasswordSchema = z.object({
 
 export type SignInFormData = z.infer<typeof signInSchema>;
 export type CreateIssueFormData = z.infer<typeof createIssueSchema>;
+export type IssueSeverityOption = 'critical' | 'high' | 'low' | 'minor';
 export type ReplyFormData = z.infer<typeof replySchema>;
 export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;

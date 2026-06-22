@@ -23,12 +23,26 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { createIssueSchema, type CreateIssueFormData } from '@/lib/validations';
+
+const SEVERITY_OPTIONS = [
+  { value: 'critical', label: 'Critical', description: 'Resolved within 6 hours' },
+  { value: 'high', label: 'High', description: 'Resolved within 12 hours' },
+  { value: 'low', label: 'Low', description: 'Resolved within 24 hours' },
+  { value: 'minor', label: 'Minor', description: 'Resolved within 48 hours' },
+] as const;
 
 interface CreateIssueModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (title: string, description: string) => Promise<void>;
+  onSubmit: (title: string, description: string, severity: string) => Promise<void>;
 }
 
 export function CreateIssueModal({
@@ -43,13 +57,14 @@ export function CreateIssueModal({
     defaultValues: {
       title: '',
       description: '',
+      severity: 'low',
     },
   });
 
   async function handleSubmit(data: CreateIssueFormData) {
     setIsLoading(true);
     try {
-      await onSubmit(data.title, data.description);
+      await onSubmit(data.title, data.description, data.severity);
       form.reset();
       onOpenChange(false);
     } catch {
@@ -103,6 +118,36 @@ export function CreateIssueModal({
                       {...field}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="severity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Priority</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={isLoading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority level" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {SEVERITY_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="font-medium">{opt.label}</span>
+                          <span className="text-muted-foreground ml-1">— {opt.description}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

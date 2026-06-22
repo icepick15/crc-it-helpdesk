@@ -34,8 +34,8 @@ export default function EmployeeDashboard() {
     }
   };
 
-  const handleCreateIssue = async (title: string, description: string) => {
-    await createIssue(title, description);
+  const handleCreateIssue = async (title: string, description: string, severity: string) => {
+    await createIssue(title, description, severity);
   };
 
   const handleReply = async (issueId: string, message: string) => {

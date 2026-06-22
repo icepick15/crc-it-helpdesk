@@ -41,14 +41,14 @@ export function useIssues() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [fetchIssues]);
 
-  const createIssue = async (title: string, description: string) => {
+  const createIssue = async (title: string, description: string, severity: string = 'low') => {
     if (!user?.id) {
       toast.error('You must be logged in to create an issue');
       throw new Error('Not authenticated');
     }
 
     try {
-      const issue = await issuesAPI.createIssue(title, description, user.id);
+      const issue = await issuesAPI.createIssue(title, description, user.id, severity);
       setIssues((prev) => [issue, ...prev]);
       toast.success('Issue created successfully');
       return issue;

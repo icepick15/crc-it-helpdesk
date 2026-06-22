@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { SeverityBadge } from '@/components/shared/SeverityBadge';
+import { SLABadge } from '@/components/shared/SLABadge';
 import { formatDate } from '@/lib/utils';
 import type { Issue } from '@/lib/types';
 
@@ -52,10 +54,10 @@ const IssueRow = memo(function IssueRow({ issue, onIssueClick, onClaim }: IssueR
         #{issue.id}
       </TableCell>
       <TableCell>
-        <div className="font-medium truncate max-w-[320px] lg:max-w-[420px]">
+        <div className="font-medium truncate max-w-[280px] lg:max-w-[360px]">
           {issue.title}
         </div>
-        <div className="text-sm text-muted-foreground truncate max-w-[320px] lg:max-w-[420px]">
+        <div className="text-sm text-muted-foreground truncate max-w-[280px] lg:max-w-[360px]">
           {issue.description}
         </div>
       </TableCell>
@@ -64,6 +66,9 @@ const IssueRow = memo(function IssueRow({ issue, onIssueClick, onClaim }: IssueR
         <div className="text-sm text-muted-foreground truncate">
           {issue.employeeEmail}
         </div>
+      </TableCell>
+      <TableCell>
+        <SeverityBadge severity={issue.severity} />
       </TableCell>
       <TableCell>
         <StatusBadge status={issue.status} />
@@ -84,6 +89,11 @@ const IssueRow = memo(function IssueRow({ issue, onIssueClick, onClaim }: IssueR
           </Button>
         ) : (
           <AssigneeBadge issue={issue} />
+        )}
+      </TableCell>
+      <TableCell>
+        {issue.status === 'pending' && (
+          <SLABadge slaResolveBy={issue.slaResolveBy} slaStatus={issue.slaStatus} />
         )}
       </TableCell>
       <TableCell className="text-center">
@@ -109,11 +119,12 @@ const MobileIssueCard = memo(function MobileIssueCard({ issue, onIssueClick, onC
       onClick={() => onIssueClick(issue)}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-mono text-muted-foreground">
             #{issue.id}
           </span>
           <StatusBadge status={issue.status} />
+          <SeverityBadge severity={issue.severity} />
         </div>
         <div className="flex items-center gap-1 text-muted-foreground text-sm">
           <MessageSquare className="h-3.5 w-3.5" />
@@ -121,9 +132,14 @@ const MobileIssueCard = memo(function MobileIssueCard({ issue, onIssueClick, onC
         </div>
       </div>
       <h3 className="font-medium mb-1 line-clamp-1">{issue.title}</h3>
-      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
         {issue.description}
       </p>
+      {issue.status === 'pending' && issue.slaResolveBy && (
+        <div className="mb-2">
+          <SLABadge slaResolveBy={issue.slaResolveBy} slaStatus={issue.slaStatus} />
+        </div>
+      )}
       <div className="flex items-center justify-between text-sm gap-2">
         <div>
           <span className="font-medium">{issue.employeeName}</span>
@@ -194,12 +210,14 @@ export const AllIssuesTable = memo(function AllIssuesTable({
             <TableRow className="bg-muted/50">
               <TableHead className="w-[70px] min-w-[70px]">ID</TableHead>
               <TableHead className="min-w-[200px]">Title</TableHead>
-              <TableHead className="w-[180px] min-w-[160px]">Employee</TableHead>
-              <TableHead className="w-[110px] min-w-[100px]">Status</TableHead>
-              <TableHead className="w-[160px] min-w-[140px]">Assigned To</TableHead>
-              <TableHead className="w-[80px] min-w-[70px] text-center">Replies</TableHead>
-              <TableHead className="w-[110px] min-w-[100px]">Created</TableHead>
-              <TableHead className="w-[110px] min-w-[100px]">Resolved</TableHead>
+              <TableHead className="w-[160px] min-w-[140px]">Employee</TableHead>
+              <TableHead className="w-[90px] min-w-[80px]">Priority</TableHead>
+              <TableHead className="w-[100px] min-w-[90px]">Status</TableHead>
+              <TableHead className="w-[150px] min-w-[130px]">Assigned To</TableHead>
+              <TableHead className="w-[130px] min-w-[110px]">SLA</TableHead>
+              <TableHead className="w-[70px] min-w-[60px] text-center">Replies</TableHead>
+              <TableHead className="w-[100px] min-w-[90px]">Created</TableHead>
+              <TableHead className="w-[100px] min-w-[90px]">Resolved</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

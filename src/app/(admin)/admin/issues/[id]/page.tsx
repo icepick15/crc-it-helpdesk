@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, UserCheck } from 'lucide-react';
+import { ArrowLeft, Loader2, UserCheck, ShieldAlert, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { IssueConversation } from '@/components/admin/IssueConversation';
 import { ReplyForm } from '@/components/admin/ReplyForm';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { SeverityBadge } from '@/components/shared/SeverityBadge';
+import { SLABadge } from '@/components/shared/SLABadge';
 import { UserProfileModal } from '@/components/shared/UserProfileModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -192,6 +194,53 @@ export default function AdminIssueDetails() {
             </div>
           </CardHeader>
         </Card>
+
+        {/* SLA Info */}
+        {issue.slaResolveBy && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5 text-muted-foreground" />
+                SLA Tracking
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Priority</p>
+                  <SeverityBadge severity={issue.severity} />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">SLA Status</p>
+                  <SLABadge slaResolveBy={issue.slaResolveBy} slaStatus={issue.slaStatus} />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Resolve By</p>
+                  <p className="text-sm font-medium flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    {formatDateTime(issue.slaResolveBy)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Claimed Within 1h</p>
+                  {issue.slaAcknowledged === null ? (
+                    <span className="text-sm text-muted-foreground">Not yet claimed</span>
+                  ) : issue.slaAcknowledged ? (
+                    <span className="inline-flex items-center gap-1 text-sm text-green-700 font-medium">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Yes
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-sm text-red-700 font-medium">
+                      <XCircle className="h-4 w-4" />
+                      No
+                    </span>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Conversation */}
         <Card>

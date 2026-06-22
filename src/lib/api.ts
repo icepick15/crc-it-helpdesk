@@ -101,6 +101,7 @@ function transformBackendIssue(
     title: backendIssue.title,
     description: backendIssue.description,
     status: backendIssue.status,
+    severity: backendIssue.severity ?? 'low',
     createdAt: backendIssue.created_at,
     updatedAt: backendIssue.created_at,
     resolvedAt: backendIssue.resolved_on || undefined,
@@ -119,6 +120,9 @@ function transformBackendIssue(
     resolvedByName: resolver
       ? `${resolver.first_name} ${resolver.last_name}`.trim() || resolver.email
       : null,
+    slaResolveBy: backendIssue.sla_resolve_by ?? null,
+    slaAcknowledged: backendIssue.sla_acknowledged ?? null,
+    slaStatus: backendIssue.sla_status ?? null,
   };
 }
 
@@ -300,7 +304,7 @@ export const issuesAPI = {
   },
 
   // Create new issue
-  createIssue: async (title: string, description: string, userId: string): Promise<Issue> => {
+  createIssue: async (title: string, description: string, userId: string, severity: string = 'low'): Promise<Issue> => {
     // Validate userId is a valid number
     const userIdNum = parseInt(userId, 10);
     if (isNaN(userIdNum)) {
@@ -313,6 +317,7 @@ export const issuesAPI = {
       title,
       description,
       reported_by: userIdNum,
+      severity,
     });
 
     // Fetch user details for the created issue (cached)
