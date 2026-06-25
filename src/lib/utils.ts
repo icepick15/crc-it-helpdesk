@@ -29,11 +29,18 @@ export function groupIssuesByMonth(issues: Issue[]): MonthlyIssueGroup[] {
     groups[monthKey].issues.push(issue);
   });
 
-  // Sort by year and month descending (newest first)
-  return Object.values(groups).sort((a, b) => {
-    if (b.year !== a.year) return b.year - a.year;
-    return b.monthNum - a.monthNum;
-  });
+  // Sort months descending, and issues within each month newest-first
+  return Object.values(groups)
+    .sort((a, b) => {
+      if (b.year !== a.year) return b.year - a.year;
+      return b.monthNum - a.monthNum;
+    })
+    .map((group) => ({
+      ...group,
+      issues: [...group.issues].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ),
+    }));
 }
 
 export function formatDate(dateString: string): string {
