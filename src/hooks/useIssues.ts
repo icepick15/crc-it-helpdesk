@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { issuesAPI, messagesAPI } from '@/lib/api';
+import { issuesAPI, messagesAPI, attachmentsAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import type { Issue, StatusFilter } from '@/lib/types';
 
@@ -41,7 +41,7 @@ export function useIssues() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [fetchIssues]);
 
-  const createIssue = async (title: string, description: string, severity: string = 'low') => {
+  const createIssue = async (title: string, description: string, severity: string = 'low', files: File[] = []) => {
     if (!user?.id) {
       toast.error('You must be logged in to create an issue');
       throw new Error('Not authenticated');
@@ -50,6 +50,18 @@ export function useIssues() {
     try {
       const issue = await issuesAPI.createIssue(title, description, user.id, severity);
       setIssues((prev) => [issue, ...prev]);
+
+      if (files.length > 0) {
+        try {
+          const attachments = await attachmentsAPI.upload(issue.id, files);
+          setIssues((prev) =>
+            prev.map((i) => (i.id === issue.id ? { ...i, attachments } : i))
+          );
+        } catch {
+          toast.error('Issue created but file upload failed');
+        }
+      }
+
       toast.success('Issue created successfully');
       return issue;
     } catch (error) {

@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { AttachmentList } from '@/components/shared/AttachmentList';
 import { formatDateTime } from '@/lib/utils';
 import { replySchema, type ReplyFormData } from '@/lib/validations';
 import type { Issue } from '@/lib/types';
@@ -91,6 +92,11 @@ export function IssueDetailsModal({
               </span>
             </div>
             <p className="text-sm whitespace-pre-wrap">{issue.description}</p>
+            {issue.attachments.length > 0 && (
+              <div className="mt-3 pt-3 border-t">
+                <AttachmentList attachments={issue.attachments} />
+              </div>
+            )}
           </div>
 
           {/* Replies */}

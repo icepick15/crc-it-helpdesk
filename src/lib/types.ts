@@ -4,7 +4,7 @@ export type IssueStatus = 'pending' | 'completed';
 
 export type IssueSeverity = 'critical' | 'high' | 'low' | 'minor';
 
-export type SLAStatus = 'on_track' | 'warning' | 'breached' | 'resolved';
+export type SLAStatus = 'unclaimed' | 'unclaimed_breach' | 'on_track' | 'warning' | 'breached' | 'resolved';
 
 export interface User {
   id: string;
@@ -28,6 +28,22 @@ export interface BackendUser {
   is_superuser?: boolean;
 }
 
+export interface BackendAttachment {
+  id: number;
+  original_name: string;
+  file_size: number;
+  url: string;
+  uploaded_at: string;
+}
+
+export interface Attachment {
+  id: string;
+  name: string;
+  size: number;
+  url: string;
+  uploadedAt: string;
+}
+
 export interface BackendIssue {
   id: number;
   title: string;
@@ -47,6 +63,7 @@ export interface BackendIssue {
   sla_resolve_by: string | null;
   sla_acknowledged: boolean | null;
   sla_status: SLAStatus | null;
+  attachments?: BackendAttachment[];
 }
 
 export interface BackendMessage {
@@ -100,6 +117,7 @@ export interface Issue {
   slaResolveBy: string | null;
   slaAcknowledged: boolean | null;
   slaStatus: SLAStatus | null;
+  attachments: Attachment[];
 }
 
 export interface AdminStats {

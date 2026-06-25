@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import type { Issue, StatusFilter } from '@/lib/types';
+import type { Issue, StatusFilter, IssueSeverity } from '@/lib/types';
 
 interface GenerateReportModalProps {
   open: boolean;
@@ -30,51 +30,80 @@ interface GenerateReportModalProps {
   issues: Issue[];
 }
 
+const TOTAL_COLUMNS = 14;
+
 function formatDateForExcel(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-GB', {
+  return new Date(dateString).toLocaleDateString('en-GB', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   });
 }
 
-async function generateExcel(issues: Issue[], statusFilter: string): Promise<Blob> {
+function formatDateTimeForExcel(dateString: string): string {
+  return new Date(dateString).toLocaleString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function slaStatusLabel(status: string | null): string {
+  switch (status) {
+    case 'on_track':        return 'On Track';
+    case 'warning':         return 'Warning (75%+)';
+    case 'breached':        return 'Breached';
+    case 'unclaimed':       return 'Unclaimed (within 1h)';
+    case 'unclaimed_breach':return 'Unclaimed (overdue)';
+    case 'resolved':        return 'Resolved';
+    default:                return 'N/A';
+  }
+}
+
+function severityLabel(s: IssueSeverity): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+async function generateExcel(
+  issues: Issue[],
+  statusFilter: string,
+  severityFilter: string,
+): Promise<Blob> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'CRC IT Service Desk';
   workbook.created = new Date();
 
   const worksheet = workbook.addWorksheet('IT Service Desk Report', {
-    views: [{ state: 'frozen', ySplit: 1 }], // Freeze header row
+    views: [{ state: 'frozen', ySplit: 1 }],
   });
 
-  // Define columns with headers - increased widths for better spacing
   worksheet.columns = [
-    { header: 'ID', key: 'id', width: 12 },
-    { header: 'Employee Name', key: 'employeeName', width: 22 },
-    { header: 'Employee Email', key: 'employeeEmail', width: 28 },
-    { header: 'Title', key: 'title', width: 40 },
-    { header: 'Description', key: 'description', width: 60 },
-    { header: 'Status', key: 'status', width: 14 },
-    { header: 'Date Created', key: 'dateCreated', width: 16 },
-    { header: 'Date Resolved', key: 'dateResolved', width: 16 },
+    { header: 'ID',               key: 'id',              width: 10 },
+    { header: 'Title',            key: 'title',           width: 36 },
+    { header: 'Description',      key: 'description',     width: 52 },
+    { header: 'Employee Name',    key: 'employeeName',    width: 22 },
+    { header: 'Employee Email',   key: 'employeeEmail',   width: 28 },
+    { header: 'Priority',         key: 'priority',        width: 12 },
+    { header: 'Status',           key: 'status',          width: 14 },
+    { header: 'Assigned To',      key: 'assignedTo',      width: 22 },
+    { header: 'Resolved By',      key: 'resolvedBy',      width: 22 },
+    { header: 'Claimed Within 1h',key: 'claimed',         width: 18 },
+    { header: 'SLA Deadline',     key: 'slaDeadline',     width: 20 },
+    { header: 'SLA Status',       key: 'slaStatus',       width: 22 },
+    { header: 'Date Created',     key: 'dateCreated',     width: 16 },
+    { header: 'Date Resolved',    key: 'dateResolved',    width: 16 },
   ];
 
-  // Style header row
+  // Header row styling
   const headerRow = worksheet.getRow(1);
   headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-  headerRow.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FF1E40AF' }, // Primary blue color
-  };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } };
   headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-  headerRow.height = 30; // Taller header
-
-  // Add border to header - only 8 columns (A-H)
-  for (let colNumber = 1; colNumber <= 8; colNumber++) {
-    const cell = headerRow.getCell(colNumber);
-    cell.border = {
+  headerRow.height = 30;
+  for (let c = 1; c <= TOTAL_COLUMNS; c++) {
+    headerRow.getCell(c).border = {
       top: { style: 'medium', color: { argb: 'FF1E3A8A' } },
       left: { style: 'medium', color: { argb: 'FF1E3A8A' } },
       bottom: { style: 'medium', color: { argb: 'FF1E3A8A' } },
@@ -82,166 +111,198 @@ async function generateExcel(issues: Issue[], statusFilter: string): Promise<Blo
     };
   }
 
-  // Calculate row height based on description length
-  const calculateRowHeight = (text: string, columnWidth: number): number => {
-    const charsPerLine = columnWidth * 1.2; // Approximate chars per line
-    const lines = Math.ceil(text.length / charsPerLine);
-    const minHeight = 35; // Minimum row height for good spacing
-    const lineHeight = 15; // Height per line
-    return Math.max(minHeight, lines * lineHeight + 20); // Add padding
+  const calculateRowHeight = (text: string, colWidth: number) => {
+    const lines = Math.ceil(text.length / (colWidth * 1.2));
+    return Math.max(35, lines * 15 + 20);
   };
 
-  // Add data rows
   issues.forEach((issue, index) => {
+    const claimedText =
+      issue.slaAcknowledged === null ? 'Not Yet' :
+      issue.slaAcknowledged ? 'Yes' : 'No';
+
     const row = worksheet.addRow({
-      id: `  ${issue.id}  `, // Add spacing around ID
+      id:           `  ${issue.id}  `,
+      title:        issue.title,
+      description:  issue.description,
       employeeName: issue.employeeName,
-      employeeEmail: issue.employeeEmail,
-      title: issue.title,
-      description: issue.description,
-      status: issue.status === 'completed' ? 'Completed' : 'Pending',
-      dateCreated: formatDateForExcel(issue.createdAt),
+      employeeEmail:issue.employeeEmail,
+      priority:     severityLabel(issue.severity),
+      status:       issue.status === 'completed' ? 'Completed' : 'Pending',
+      assignedTo:   issue.assignedToName ?? 'Unassigned',
+      resolvedBy:   issue.resolvedByName ?? '—',
+      claimed:      claimedText,
+      slaDeadline:  issue.slaResolveBy ? formatDateTimeForExcel(issue.slaResolveBy) : 'Awaiting Claim',
+      slaStatus:    slaStatusLabel(issue.slaStatus),
+      dateCreated:  formatDateForExcel(issue.createdAt),
       dateResolved: issue.resolvedAt ? formatDateForExcel(issue.resolvedAt) : 'N/A',
     });
 
-    // Alternate row colors
-    const isEvenRow = index % 2 === 0;
+    // Alternating row background
     row.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: isEvenRow ? 'FFF1F5F9' : 'FFFFFFFF' }, // Slightly more visible alternating
+      fgColor: { argb: index % 2 === 0 ? 'FFF1F5F9' : 'FFFFFFFF' },
     };
 
-    // Style status cell based on value
+    // Priority cell colour
+    const priorityColors: Record<string, { bg: string; fg: string }> = {
+      Critical: { bg: 'FFFFE4E4', fg: 'FFDC2626' },
+      High:     { bg: 'FFFFF7ED', fg: 'FFD97706' },
+      Low:      { bg: 'FFFEFCE8', fg: 'FFCA8A04' },
+      Minor:    { bg: 'FFF8FAFC', fg: 'FF64748B' },
+    };
+    const pc = priorityColors[severityLabel(issue.severity)];
+    if (pc) {
+      const cell = row.getCell('priority');
+      cell.font = { bold: true, size: 10, color: { argb: pc.fg } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: pc.bg } };
+    }
+
+    // Status cell colour
     const statusCell = row.getCell('status');
     if (issue.status === 'completed') {
       statusCell.font = { color: { argb: 'FF16A34A' }, bold: true, size: 10 };
-      statusCell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFDCFCE7' }, // Light green background
-      };
+      statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
     } else {
       statusCell.font = { color: { argb: 'FFCA8A04' }, bold: true, size: 10 };
-      statusCell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFFEF3C7' }, // Light amber background
-      };
+      statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
     }
 
-    // Add borders and alignment to only the 8 defined columns (A-H)
-    for (let colNumber = 1; colNumber <= 8; colNumber++) {
-      const cell = row.getCell(colNumber);
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-        left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-        bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-        right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-      };
+    // SLA Status cell colour
+    const slaColors: Record<string, { bg: string; fg: string }> = {
+      'On Track':              { bg: 'FFDCFCE7', fg: 'FF16A34A' },
+      'Warning (75%+)':       { bg: 'FFFEFCE8', fg: 'FFCA8A04' },
+      'Breached':              { bg: 'FFFFE4E4', fg: 'FFDC2626' },
+      'Unclaimed (within 1h)':{ bg: 'FFFEF3C7', fg: 'FFD97706' },
+      'Unclaimed (overdue)':  { bg: 'FFFFE4E4', fg: 'FFDC2626' },
+      'Resolved':              { bg: 'FFEFF6FF', fg: 'FF1E40AF' },
+    };
+    const label = slaStatusLabel(issue.slaStatus);
+    const sc = slaColors[label];
+    if (sc) {
+      const cell = row.getCell('slaStatus');
+      cell.font = { bold: true, size: 10, color: { argb: sc.fg } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: sc.bg } };
+    }
 
-      // Different alignment for different columns
-      if (colNumber === 1) {
-        // ID column - center
-        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
-      } else if (colNumber === 6 || colNumber === 7 || colNumber === 8) {
-        // Status and date columns - center
+    // Claimed cell colour
+    const claimedCell = row.getCell('claimed');
+    if (issue.slaAcknowledged === true) {
+      claimedCell.font = { bold: true, size: 10, color: { argb: 'FF16A34A' } };
+    } else if (issue.slaAcknowledged === false) {
+      claimedCell.font = { bold: true, size: 10, color: { argb: 'FFDC2626' } };
+    }
+
+    // Borders and alignment for all columns
+    for (let c = 1; c <= TOTAL_COLUMNS; c++) {
+      const cell = row.getCell(c);
+      cell.border = {
+        top:    { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        left:   { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        right:  { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      };
+      // ID — center; date/status/priority/sla cols — center; text cols — left with wrap
+      const centredCols = [1, 6, 7, 10, 11, 12, 13, 14];
+      if (centredCols.includes(c)) {
         cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
       } else {
-        // Text columns - left aligned with wrap
         cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 };
       }
     }
 
-    // Dynamic row height based on description length
-    row.height = calculateRowHeight(issue.description, 60);
+    row.height = calculateRowHeight(issue.description, 52);
   });
 
-  // Add empty row before summary
-  const emptyRowIndex = issues.length + 2;
-  worksheet.getRow(emptyRowIndex).height = 20;
+  // ── Summary section ─────────────────────────────────────────────────────
+  const emptyRow = issues.length + 2;
+  worksheet.getRow(emptyRow).height = 20;
 
-  // Add summary section with better styling
-  const summaryRowIndex = issues.length + 4;
+  const sumStart = issues.length + 4;
 
-  // Summary header
-  worksheet.mergeCells(`A${summaryRowIndex}:B${summaryRowIndex}`);
-  const summaryHeaderCell = worksheet.getCell(`A${summaryRowIndex}`);
-  summaryHeaderCell.value = 'Report Summary';
-  summaryHeaderCell.font = { bold: true, size: 12, color: { argb: 'FF1E40AF' } };
-  summaryHeaderCell.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFEFF6FF' },
-  };
-  summaryHeaderCell.border = {
+  worksheet.mergeCells(`A${sumStart}:C${sumStart}`);
+  const summaryHeader = worksheet.getCell(`A${sumStart}`);
+  summaryHeader.value = 'Report Summary';
+  summaryHeader.font = { bold: true, size: 12, color: { argb: 'FF1E40AF' } };
+  summaryHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } };
+  summaryHeader.border = {
     top: { style: 'medium', color: { argb: 'FF1E40AF' } },
     left: { style: 'medium', color: { argb: 'FF1E40AF' } },
     bottom: { style: 'thin', color: { argb: 'FF1E40AF' } },
     right: { style: 'medium', color: { argb: 'FF1E40AF' } },
   };
-  worksheet.getRow(summaryRowIndex).height = 28;
+  worksheet.getRow(sumStart).height = 28;
 
-  // Summary rows styling helper
-  const styleSummaryRow = (rowNum: number, label: string, value: string | number, valueColor?: string) => {
-    worksheet.getCell(`A${rowNum}`).value = label;
-    worksheet.getCell(`A${rowNum}`).font = { bold: true, size: 10 };
-    worksheet.getCell(`A${rowNum}`).alignment = { indent: 1 };
-    worksheet.getCell(`A${rowNum}`).border = {
-      left: { style: 'medium', color: { argb: 'FF1E40AF' } },
-      bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+  const addSummaryRow = (rowNum: number, label: string, value: string | number, valueColor?: string) => {
+    const lCell = worksheet.getCell(`A${rowNum}`);
+    lCell.value = label;
+    lCell.font = { bold: true, size: 10 };
+    lCell.alignment = { indent: 1 };
+    lCell.border = {
+      left:   { style: 'medium', color: { argb: 'FF1E40AF' } },
+      bottom: { style: 'thin',   color: { argb: 'FFE2E8F0' } },
     };
 
-    worksheet.getCell(`B${rowNum}`).value = value;
-    worksheet.getCell(`B${rowNum}`).font = {
-      bold: true,
-      size: 10,
-      color: valueColor ? { argb: valueColor } : undefined
-    };
-    worksheet.getCell(`B${rowNum}`).alignment = { horizontal: 'left', indent: 1 };
-    worksheet.getCell(`B${rowNum}`).border = {
-      right: { style: 'medium', color: { argb: 'FF1E40AF' } },
-      bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+    const vCell = worksheet.getCell(`B${rowNum}`);
+    vCell.value = value;
+    vCell.font = { bold: true, size: 10, ...(valueColor ? { color: { argb: valueColor } } : {}) };
+    vCell.alignment = { horizontal: 'left', indent: 1 };
+    vCell.border = {
+      right:  { style: 'medium', color: { argb: 'FF1E40AF' } },
+      bottom: { style: 'thin',   color: { argb: 'FFE2E8F0' } },
     };
     worksheet.getRow(rowNum).height = 22;
   };
 
-  const completedCount = issues.filter(i => i.status === 'completed').length;
-  const pendingCount = issues.filter(i => i.status === 'pending').length;
+  const completedCount  = issues.filter(i => i.status === 'completed').length;
+  const pendingCount    = issues.filter(i => i.status === 'pending').length;
+  const criticalCount   = issues.filter(i => i.severity === 'critical').length;
+  const highCount       = issues.filter(i => i.severity === 'high').length;
+  const lowCount        = issues.filter(i => i.severity === 'low').length;
+  const minorCount      = issues.filter(i => i.severity === 'minor').length;
+  const breachedCount   = issues.filter(i => i.slaStatus === 'breached').length;
 
-  styleSummaryRow(summaryRowIndex + 1, 'Total Issues:', issues.length);
-  styleSummaryRow(summaryRowIndex + 2, 'Completed:', completedCount, 'FF16A34A');
-  styleSummaryRow(summaryRowIndex + 3, 'Pending:', pendingCount, 'FFCA8A04');
+  let r = sumStart + 1;
+  addSummaryRow(r++, 'Total Issues:',   issues.length);
+  addSummaryRow(r++, 'Completed:',      completedCount,  'FF16A34A');
+  addSummaryRow(r++, 'Pending:',        pendingCount,    'FFCA8A04');
+  addSummaryRow(r++, '─ Critical:',     criticalCount,   'FFDC2626');
+  addSummaryRow(r++, '─ High:',         highCount,       'FFD97706');
+  addSummaryRow(r++, '─ Low:',          lowCount,        'FFCA8A04');
+  addSummaryRow(r++, '─ Minor:',        minorCount,      'FF64748B');
+  addSummaryRow(r++, 'SLA Breached:',   breachedCount,   breachedCount > 0 ? 'FFDC2626' : undefined);
 
-  // Report type row
-  const reportTypeRow = summaryRowIndex + 4;
-  worksheet.mergeCells(`A${reportTypeRow}:B${reportTypeRow}`);
-  worksheet.getCell(`A${reportTypeRow}`).value = `Report Type: ${statusFilter === 'all' ? 'All Issues' : statusFilter === 'completed' ? 'Completed Only' : 'Pending Only'}`;
-  worksheet.getCell(`A${reportTypeRow}`).font = { size: 10 };
-  worksheet.getCell(`A${reportTypeRow}`).alignment = { indent: 1 };
-  worksheet.getCell(`A${reportTypeRow}`).border = {
-    left: { style: 'medium', color: { argb: 'FF1E40AF' } },
-    right: { style: 'medium', color: { argb: 'FF1E40AF' } },
-    bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+  // Filters applied row
+  worksheet.mergeCells(`A${r}:B${r}`);
+  const filterCell = worksheet.getCell(`A${r}`);
+  filterCell.value = `Filters: Status = ${statusFilter === 'all' ? 'All' : statusFilter}${severityFilter !== 'all' ? ` | Priority = ${severityLabel(severityFilter as IssueSeverity)}` : ''}`;
+  filterCell.font = { size: 10 };
+  filterCell.alignment = { indent: 1 };
+  filterCell.border = {
+    left:   { style: 'medium', color: { argb: 'FF1E40AF' } },
+    right:  { style: 'medium', color: { argb: 'FF1E40AF' } },
+    bottom: { style: 'thin',   color: { argb: 'FFE2E8F0' } },
   };
-  worksheet.getRow(reportTypeRow).height = 22;
+  worksheet.getRow(r++).height = 22;
 
-  // Generated timestamp row
-  const timestampRow = summaryRowIndex + 5;
-  worksheet.mergeCells(`A${timestampRow}:B${timestampRow}`);
-  worksheet.getCell(`A${timestampRow}`).value = `Generated: ${new Date().toLocaleString('en-GB')}`;
-  worksheet.getCell(`A${timestampRow}`).font = { italic: true, size: 9, color: { argb: 'FF64748B' } };
-  worksheet.getCell(`A${timestampRow}`).alignment = { indent: 1 };
-  worksheet.getCell(`A${timestampRow}`).border = {
-    left: { style: 'medium', color: { argb: 'FF1E40AF' } },
-    right: { style: 'medium', color: { argb: 'FF1E40AF' } },
+  // Generated timestamp
+  worksheet.mergeCells(`A${r}:B${r}`);
+  const tsCell = worksheet.getCell(`A${r}`);
+  tsCell.value = `Generated: ${new Date().toLocaleString('en-GB')}`;
+  tsCell.font = { italic: true, size: 9, color: { argb: 'FF64748B' } };
+  tsCell.alignment = { indent: 1 };
+  tsCell.border = {
+    left:   { style: 'medium', color: { argb: 'FF1E40AF' } },
+    right:  { style: 'medium', color: { argb: 'FF1E40AF' } },
     bottom: { style: 'medium', color: { argb: 'FF1E40AF' } },
   };
-  worksheet.getRow(timestampRow).height = 22;
+  worksheet.getRow(r).height = 22;
 
-  // Generate buffer and create blob
   const buffer = await workbook.xlsx.writeBuffer();
-  return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  return new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
 }
 
 function downloadExcel(blob: Blob, filename: string) {
@@ -256,14 +317,11 @@ function downloadExcel(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function GenerateReportModal({
-  open,
-  onOpenChange,
-  issues,
-}: GenerateReportModalProps) {
+export function GenerateReportModal({ open, onOpenChange, issues }: GenerateReportModalProps) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [severityFilter, setSeverityFilter] = useState('all');
   const [generating, setGenerating] = useState(false);
 
   const handleGenerate = async () => {
@@ -274,7 +332,7 @@ export function GenerateReportModal({
 
     const start = new Date(startDate);
     const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999); // Include the entire end date
+    end.setHours(23, 59, 59, 999);
 
     if (start > end) {
       toast.error('Start date must be before end date');
@@ -282,46 +340,35 @@ export function GenerateReportModal({
     }
 
     setGenerating(true);
-
     try {
-      // Filter issues based on status and date range
-      const filteredIssues = issues.filter((issue) => {
-        // First filter by status
-        if (statusFilter !== 'all' && issue.status !== statusFilter) {
-          return false;
-        }
+      const filtered = issues.filter((issue) => {
+        if (statusFilter !== 'all' && issue.status !== statusFilter) return false;
+        if (severityFilter !== 'all' && issue.severity !== severityFilter) return false;
 
-        // For completed issues, filter by resolvedAt date
-        // For pending/all issues, filter by createdAt date
-        if (statusFilter === 'completed' && issue.resolvedAt) {
-          const resolvedDate = new Date(issue.resolvedAt);
-          return resolvedDate >= start && resolvedDate <= end;
-        } else {
-          const createdDate = new Date(issue.createdAt);
-          return createdDate >= start && createdDate <= end;
-        }
+        const dateToCheck = statusFilter === 'completed' && issue.resolvedAt
+          ? new Date(issue.resolvedAt)
+          : new Date(issue.createdAt);
+
+        return dateToCheck >= start && dateToCheck <= end;
       });
 
-      if (filteredIssues.length === 0) {
-        const statusText = statusFilter === 'all' ? '' : ` ${statusFilter}`;
-        toast.error(`No${statusText} issues found in the selected date range`);
+      if (filtered.length === 0) {
+        toast.error('No issues found matching the selected filters and date range');
         setGenerating(false);
         return;
       }
 
-      // Generate and download Excel
-      const blob = await generateExcel(filteredIssues, statusFilter);
-      const statusSuffix = statusFilter === 'all' ? 'all' : statusFilter;
-      const filename = `CRC-IT-helpdesk-report-${statusSuffix}-${startDate}-to-${endDate}.xlsx`;
+      const blob = await generateExcel(filtered, statusFilter, severityFilter);
+      const sevSuffix = severityFilter !== 'all' ? `-${severityFilter}` : '';
+      const filename = `CRC-IT-report-${statusFilter}${sevSuffix}-${startDate}-to-${endDate}.xlsx`;
       downloadExcel(blob, filename);
 
-      toast.success(`Report generated with ${filteredIssues.length} issue(s)`);
+      toast.success(`Report generated — ${filtered.length} issue(s) exported`);
       onOpenChange(false);
-
-      // Reset form
       setStartDate('');
       setEndDate('');
       setStatusFilter('all');
+      setSeverityFilter('all');
     } catch (error) {
       console.error('Failed to generate report:', error);
       toast.error('Failed to generate report');
@@ -335,13 +382,7 @@ export function GenerateReportModal({
     setStartDate('');
     setEndDate('');
     setStatusFilter('all');
-  };
-
-  const getDateFilterLabel = () => {
-    if (statusFilter === 'completed') {
-      return 'Filter by resolved date';
-    }
-    return 'Filter by created date';
+    setSeverityFilter('all');
   };
 
   return (
@@ -353,59 +394,71 @@ export function GenerateReportModal({
             Generate Report
           </DialogTitle>
           <DialogDescription>
-            Select status and date range to generate an Excel report.
+            Filter by status, priority, and date range to export an Excel report.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="status-filter">Status</Label>
-            <Select
-              value={statusFilter}
-              onValueChange={(value: StatusFilter) => setStatusFilter(value)}
-            >
-              <SelectTrigger id="status-filter">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Issues</SelectItem>
-                <SelectItem value="pending">Pending Only</SelectItem>
-                <SelectItem value="completed">Completed Only</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={statusFilter} onValueChange={(v: StatusFilter) => setStatusFilter(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Issues</SelectItem>
+                  <SelectItem value="pending">Pending Only</SelectItem>
+                  <SelectItem value="completed">Completed Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <Select value={severityFilter} onValueChange={setSeverityFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="minor">Minor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            {getDateFilterLabel()}
+            {statusFilter === 'completed' ? 'Filtering by resolved date' : 'Filtering by created date'}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="start-date">Start Date</Label>
-            <Input
-              id="start-date"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="end-date">End Date</Label>
-            <Input
-              id="end-date"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="start-date">Start Date</Label>
+              <Input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="end-date">End Date</Label>
+              <Input
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={handleClose}>Cancel</Button>
           <Button onClick={handleGenerate} disabled={generating}>
             {generating ? (
               <>

@@ -10,6 +10,7 @@ import { ReplyForm } from '@/components/admin/ReplyForm';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { SeverityBadge } from '@/components/shared/SeverityBadge';
 import { SLABadge } from '@/components/shared/SLABadge';
+import { AttachmentList } from '@/components/shared/AttachmentList';
 import { UserProfileModal } from '@/components/shared/UserProfileModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -196,7 +197,7 @@ export default function AdminIssueDetails() {
         </Card>
 
         {/* SLA Info */}
-        {issue.slaResolveBy && (
+        {issue.slaStatus && issue.slaStatus !== 'resolved' && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -212,13 +213,21 @@ export default function AdminIssueDetails() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">SLA Status</p>
-                  <SLABadge slaResolveBy={issue.slaResolveBy} slaStatus={issue.slaStatus} />
+                  <SLABadge
+                    slaStatus={issue.slaStatus}
+                    createdAt={issue.createdAt}
+                    slaResolveBy={issue.slaResolveBy}
+                  />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Resolve By</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                    {issue.assignedToId ? 'Resolve By' : 'Claim By'}
+                  </p>
                   <p className="text-sm font-medium flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {formatDateTime(issue.slaResolveBy)}
+                    {issue.assignedToId
+                      ? issue.slaResolveBy ? formatDateTime(issue.slaResolveBy) : '—'
+                      : formatDateTime(new Date(new Date(issue.createdAt).getTime() + 3600000).toISOString())}
                   </p>
                 </div>
                 <div>
@@ -238,6 +247,20 @@ export default function AdminIssueDetails() {
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Attachments */}
+        {issue.attachments.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">
+                Attachments ({issue.attachments.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AttachmentList attachments={issue.attachments} />
             </CardContent>
           </Card>
         )}

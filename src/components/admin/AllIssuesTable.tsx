@@ -93,7 +93,7 @@ const IssueRow = memo(function IssueRow({ issue, onIssueClick, onClaim }: IssueR
       </TableCell>
       <TableCell>
         {issue.status === 'pending' && (
-          <SLABadge slaResolveBy={issue.slaResolveBy} slaStatus={issue.slaStatus} />
+          <SLABadge slaStatus={issue.slaStatus} createdAt={issue.createdAt} slaResolveBy={issue.slaResolveBy} />
         )}
       </TableCell>
       <TableCell className="text-center">
@@ -135,9 +135,9 @@ const MobileIssueCard = memo(function MobileIssueCard({ issue, onIssueClick, onC
       <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
         {issue.description}
       </p>
-      {issue.status === 'pending' && issue.slaResolveBy && (
+      {issue.status === 'pending' && (
         <div className="mb-2">
-          <SLABadge slaResolveBy={issue.slaResolveBy} slaStatus={issue.slaStatus} />
+          <SLABadge slaStatus={issue.slaStatus} createdAt={issue.createdAt} slaResolveBy={issue.slaResolveBy} />
         </div>
       )}
       <div className="flex items-center justify-between text-sm gap-2">

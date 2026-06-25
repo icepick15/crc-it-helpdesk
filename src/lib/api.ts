@@ -3,10 +3,12 @@ import type {
   User,
   Issue,
   Reply,
+  Attachment,
   AdminStats,
   StatusFilter,
   BackendUser,
   BackendIssue,
+  BackendAttachment,
   BackendMessage,
   BackendTokenResponse,
   BackendPaginatedResponse,
@@ -123,6 +125,17 @@ function transformBackendIssue(
     slaResolveBy: backendIssue.sla_resolve_by ?? null,
     slaAcknowledged: backendIssue.sla_acknowledged ?? null,
     slaStatus: backendIssue.sla_status ?? null,
+    attachments: (backendIssue.attachments ?? []).map(transformBackendAttachment),
+  };
+}
+
+function transformBackendAttachment(a: BackendAttachment): Attachment {
+  return {
+    id: String(a.id),
+    name: a.original_name,
+    size: a.file_size,
+    url: a.url,
+    uploadedAt: a.uploaded_at,
   };
 }
 
@@ -503,6 +516,21 @@ export const verifyAPI = {
     await apiClient.patch(`/verify/${verificationId}/`, {
       used: true,
     });
+  },
+};
+
+// ============ Attachments API ============
+
+export const attachmentsAPI = {
+  upload: async (issueId: string, files: File[]): Promise<Attachment[]> => {
+    const formData = new FormData();
+    files.forEach((f) => formData.append('files', f));
+    const response = await apiClient.post<BackendAttachment[]>(
+      `/issues/${issueId}/attachments/`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return response.data.map(transformBackendAttachment);
   },
 };
 
