@@ -38,19 +38,77 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle response errors
+function clearAuthAndRedirect() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    window.location.href = '/signin';
+  }
+}
+
+// Queue of requests waiting for a token refresh to complete
+let isRefreshing = false;
+type QueueEntry = { resolve: (token: string) => void; reject: (err: unknown) => void };
+let refreshQueue: QueueEntry[] = [];
+
+function drainQueue(err: unknown, token: string | null) {
+  refreshQueue.forEach((entry) => (err ? entry.reject(err) : entry.resolve(token!)));
+  refreshQueue = [];
+}
+
+// Handle 401s — attempt silent token refresh before logging out
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        window.location.href = '/signin';
-      }
+  async (error) => {
+    const original = error.config as typeof error.config & { _retry?: boolean };
+
+    // Don't retry token or refresh endpoints — logout immediately
+    if (
+      error.response?.status !== 401 ||
+      original._retry ||
+      original.url?.includes('/token/')
+    ) {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+
+    if (isRefreshing) {
+      // Hang this request until the in-flight refresh resolves
+      return new Promise<string>((resolve, reject) => {
+        refreshQueue.push({ resolve, reject });
+      }).then((newToken) => {
+        original.headers.Authorization = `Bearer ${newToken}`;
+        return apiClient(original);
+      });
+    }
+
+    original._retry = true;
+    isRefreshing = true;
+
+    const refreshToken = typeof window !== 'undefined'
+      ? localStorage.getItem('refresh_token')
+      : null;
+
+    if (!refreshToken) {
+      clearAuthAndRedirect();
+      return Promise.reject(error);
+    }
+
+    try {
+      const { data } = await apiClient.post<{ access: string }>('/token/refresh/', {
+        refresh: refreshToken,
+      });
+      localStorage.setItem('token', data.access);
+      drainQueue(null, data.access);
+      original.headers.Authorization = `Bearer ${data.access}`;
+      return apiClient(original);
+    } catch (refreshError) {
+      drainQueue(refreshError, null);
+      clearAuthAndRedirect();
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
 
