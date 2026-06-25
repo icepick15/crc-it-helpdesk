@@ -14,7 +14,7 @@ import { AttachmentList } from '@/components/shared/AttachmentList';
 import { UserProfileModal } from '@/components/shared/UserProfileModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { issuesAPI, messagesAPI } from '@/lib/api';
+import { issuesAPI, messagesAPI, attachmentsAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { formatDateTime } from '@/lib/utils';
 import type { Issue } from '@/lib/types';
@@ -52,7 +52,7 @@ export default function AdminIssueDetails() {
     }
   }, [issueId, router]);
 
-  const handleReply = async (message: string) => {
+  const handleReply = async (message: string, files: File[]) => {
     if (!issue || !user) return;
     try {
       const reply = await messagesAPI.sendMessage(issue.id, message, {
@@ -60,7 +60,14 @@ export default function AdminIssueDetails() {
         name: user.name,
         role: user.role,
       });
-      setIssue({ ...issue, replies: [...issue.replies, reply] });
+      let updatedIssue = { ...issue, replies: [...issue.replies, reply] };
+
+      if (files.length > 0) {
+        const newAttachments = await attachmentsAPI.upload(issue.id, files);
+        updatedIssue = { ...updatedIssue, attachments: [...issue.attachments, ...newAttachments] };
+      }
+
+      setIssue(updatedIssue);
       toast.success('Reply sent successfully');
     } catch (error) {
       toast.error('Failed to send reply');

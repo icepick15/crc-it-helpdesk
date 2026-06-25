@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Paperclip, X, FileText, Image, File } from 'lucide-react';
+import { Loader2, Paperclip, X, FileText, Image, File, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,8 +39,9 @@ const SEVERITY_OPTIONS = [
   { value: 'minor',    label: 'Minor',    description: 'Resolved within 48 hours' },
 ] as const;
 
-const ACCEPTED = '.jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip';
+const ACCEPTED = '.jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.mp4';
 const MAX_SIZE_MB = 10;
+const MAX_VIDEO_MB = 25;
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -49,6 +50,7 @@ function formatFileSize(bytes: number): string {
 
 function FileIcon({ name }: { name: string }) {
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  if (ext === 'mp4') return <Video className="h-3.5 w-3.5 text-purple-500 shrink-0" />;
   if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext))
     return <Image className="h-3.5 w-3.5 text-blue-500 shrink-0" />;
   if (['pdf', 'doc', 'docx', 'txt'].includes(ext))
@@ -77,9 +79,14 @@ export function CreateIssueModal({ open, onOpenChange, onSubmit }: CreateIssueMo
     const picked = Array.from(e.target.files ?? []);
     setFileError('');
 
-    const oversized = picked.filter((f) => f.size > MAX_SIZE_MB * 1024 * 1024);
-    if (oversized.length > 0) {
-      setFileError(`${oversized[0].name} exceeds ${MAX_SIZE_MB} MB`);
+    const oversized = picked.find((f) => {
+      const isVideo = f.name.split('.').pop()?.toLowerCase() === 'mp4';
+      const limit = isVideo ? MAX_VIDEO_MB : MAX_SIZE_MB;
+      return f.size > limit * 1024 * 1024;
+    });
+    if (oversized) {
+      const isVideo = oversized.name.split('.').pop()?.toLowerCase() === 'mp4';
+      setFileError(`"${oversized.name}" exceeds ${isVideo ? MAX_VIDEO_MB : MAX_SIZE_MB} MB`);
       return;
     }
 
@@ -203,7 +210,9 @@ export function CreateIssueModal({ open, onOpenChange, onSubmit }: CreateIssueMo
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Attachments</span>
-                <span className="text-xs text-muted-foreground">Max {MAX_SIZE_MB} MB per file</span>
+                <span className="text-xs text-muted-foreground">
+                  Images/docs: {MAX_SIZE_MB} MB · MP4: {MAX_VIDEO_MB} MB
+                </span>
               </div>
 
               <input

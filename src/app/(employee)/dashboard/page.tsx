@@ -38,13 +38,13 @@ export default function EmployeeDashboard() {
     await createIssue(title, description, severity, files);
   };
 
-  const handleReply = async (issueId: string, message: string) => {
-    const reply = await replyToIssue(issueId, message);
-    // Update the selected issue to show the new reply
+  const handleReply = async (issueId: string, message: string, files: File[]) => {
+    const { reply, attachments } = await replyToIssue(issueId, message, files);
     if (selectedIssue && selectedIssue.id === issueId) {
       setSelectedIssue({
         ...selectedIssue,
         replies: [...selectedIssue.replies, reply],
+        attachments: attachments ?? selectedIssue.attachments,
       });
     }
   };

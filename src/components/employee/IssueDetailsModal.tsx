@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Send } from 'lucide-react';
+import {
+  Loader2, Send, Paperclip, X, FileText, Image, File, Video,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
@@ -26,11 +28,31 @@ import { formatDateTime } from '@/lib/utils';
 import { replySchema, type ReplyFormData } from '@/lib/validations';
 import type { Issue } from '@/lib/types';
 
+const ACCEPTED = '.jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.mp4';
+const MAX_SIZE_MB = 10;
+const MAX_VIDEO_MB = 25;
+const SUPPORTED_LABEL = 'JPG · PNG · GIF · WEBP · PDF · DOC · DOCX · XLS · XLSX · TXT · CSV · ZIP · MP4';
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function FileIcon({ name }: { name: string }) {
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  if (ext === 'mp4') return <Video className="h-3.5 w-3.5 text-purple-500 shrink-0" />;
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext))
+    return <Image className="h-3.5 w-3.5 text-blue-500 shrink-0" />;
+  if (['pdf', 'doc', 'docx', 'txt'].includes(ext))
+    return <FileText className="h-3.5 w-3.5 text-red-500 shrink-0" />;
+  return <File className="h-3.5 w-3.5 text-muted-foreground shrink-0" />;
+}
+
 interface IssueDetailsModalProps {
   issue: Issue | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onReply: (issueId: string, message: string) => Promise<void>;
+  onReply: (issueId: string, message: string, files: File[]) => Promise<void>;
 }
 
 export function IssueDetailsModal({
@@ -40,20 +62,46 @@ export function IssueDetailsModal({
   onReply,
 }: IssueDetailsModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ReplyFormData>({
     resolver: zodResolver(replySchema),
-    defaultValues: {
-      message: '',
-    },
+    defaultValues: { message: '' },
   });
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? []);
+    setFileError('');
+    const oversized = picked.find((f) => {
+      const isVideo = f.name.split('.').pop()?.toLowerCase() === 'mp4';
+      return f.size > (isVideo ? MAX_VIDEO_MB : MAX_SIZE_MB) * 1024 * 1024;
+    });
+    if (oversized) {
+      const isVideo = oversized.name.split('.').pop()?.toLowerCase() === 'mp4';
+      setFileError(`"${oversized.name}" exceeds ${isVideo ? MAX_VIDEO_MB : MAX_SIZE_MB} MB`);
+      return;
+    }
+    setFiles((prev) => {
+      const existing = new Set(prev.map((f) => f.name));
+      return [...prev, ...picked.filter((f) => !existing.has(f.name))];
+    });
+    if (inputRef.current) inputRef.current.value = '';
+  }
+
+  function removeFile(name: string) {
+    setFiles((prev) => prev.filter((f) => f.name !== name));
+  }
 
   async function handleReply(data: ReplyFormData) {
     if (!issue) return;
     setIsLoading(true);
     try {
-      await onReply(issue.id, data.message);
+      await onReply(issue.id, data.message, files);
       form.reset();
+      setFiles([]);
+      setFileError('');
     } catch {
       // Error handled in parent
     } finally {
@@ -136,20 +184,17 @@ export function IssueDetailsModal({
           )}
         </div>
 
-        {/* Reply Form - Only show if issue is pending */}
+        {/* Reply Form — only when pending */}
         {issue.status === 'pending' && (
           <>
             <Separator />
             <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(handleReply)}
-                className="flex gap-2 pt-2"
-              >
+              <form onSubmit={form.handleSubmit(handleReply)} className="space-y-2 pt-2">
                 <FormField
                   control={form.control}
                   name="message"
                   render={({ field }) => (
-                    <FormItem className="flex-1">
+                    <FormItem>
                       <FormControl>
                         <Textarea
                           placeholder="Type your reply..."
@@ -162,13 +207,73 @@ export function IssueDetailsModal({
                     </FormItem>
                   )}
                 />
-                <Button type="submit" size="icon" disabled={isLoading}>
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
+
+                {/* File picker */}
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept={ACCEPTED}
+                  multiple
+                  className="hidden"
+                  onChange={handleFileChange}
+                  disabled={isLoading}
+                />
+                <div className="space-y-1.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 gap-1.5 text-muted-foreground hover:text-foreground"
+                    onClick={() => inputRef.current?.click()}
+                    disabled={isLoading}
+                  >
+                    <Paperclip className="h-3.5 w-3.5" />
+                    Attach files
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground pl-1 leading-relaxed">
+                    {SUPPORTED_LABEL}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground pl-1">
+                    Images / docs: {MAX_SIZE_MB} MB &nbsp;&middot;&nbsp; MP4: {MAX_VIDEO_MB} MB
+                  </p>
+
+                  {fileError && <p className="text-xs text-destructive pl-1">{fileError}</p>}
+
+                  {files.length > 0 && (
+                    <div className="space-y-1 max-h-24 overflow-y-auto">
+                      {files.map((f) => (
+                        <div
+                          key={f.name}
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-muted/60"
+                        >
+                          <FileIcon name={f.name} />
+                          <span className="flex-1 truncate text-xs">{f.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {formatFileSize(f.size)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(f.name)}
+                            disabled={isLoading}
+                            className="text-muted-foreground hover:text-destructive transition"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </Button>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button type="submit" size="sm" disabled={isLoading}>
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </form>
             </Form>
           </>

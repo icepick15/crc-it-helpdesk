@@ -71,7 +71,7 @@ export function useIssues() {
     }
   };
 
-  const replyToIssue = async (issueId: string, message: string) => {
+  const replyToIssue = async (issueId: string, message: string, files: File[] = []) => {
     if (!user?.id) {
       toast.error('You must be logged in to reply');
       throw new Error('Not authenticated');
@@ -83,15 +83,29 @@ export function useIssues() {
         name: user.name,
         role: user.role,
       });
+
+      let newAttachments = undefined;
+      if (files.length > 0) {
+        try {
+          newAttachments = await attachmentsAPI.upload(issueId, files);
+        } catch {
+          toast.error('Reply sent but file upload failed');
+        }
+      }
+
       setIssues((prev) =>
         prev.map((issue) =>
           issue.id === issueId
-            ? { ...issue, replies: [...issue.replies, reply] }
+            ? {
+                ...issue,
+                replies: [...issue.replies, reply],
+                ...(newAttachments ? { attachments: [...issue.attachments, ...newAttachments] } : {}),
+              }
             : issue
         )
       );
       toast.success('Reply sent successfully');
-      return reply;
+      return { reply, attachments: newAttachments };
     } catch (error) {
       console.error('Failed to reply to issue:', error);
       toast.error('Failed to send reply');
