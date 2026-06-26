@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Paperclip, X, FileText, Image, File, Video, Info } from 'lucide-react';
+import { Loader2, Paperclip, X, FileText, Image, File, Video, Info, ChevronDown, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,21 +23,9 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { createIssueSchema, type CreateIssueFormData } from '@/lib/validations';
 
-const SEVERITY_OPTIONS = [
-  { value: 'critical', label: 'Critical', description: 'Resolved within 6 hours' },
-  { value: 'high',     label: 'High',     description: 'Resolved within 12 hours' },
-  { value: 'low',      label: 'Low',      description: 'Resolved within 24 hours' },
-  { value: 'minor',    label: 'Minor',    description: 'Resolved within 48 hours' },
-] as const;
+// ── Priority data ──────────────────────────────────────────────────────────────
 
 const PRIORITY_DETAILS = [
   {
@@ -98,38 +86,141 @@ const PRIORITY_DETAILS = [
   },
 ] as const;
 
-function PriorityGuide() {
+type PriorityValue = typeof PRIORITY_DETAILS[number]['value'];
+
+// ── Tooltip rendered at a fixed screen position ────────────────────────────────
+
+interface TooltipState {
+  priority: PriorityValue;
+  top: number;
+  left: number;
+}
+
+function PriorityTooltip({ state }: { state: TooltipState }) {
+  const detail = PRIORITY_DETAILS.find((p) => p.value === state.priority);
+  if (!detail) return null;
+
+  const TOOLTIP_W = 288;
+  const safeLeft = Math.min(state.left, window.innerWidth - TOOLTIP_W - 12);
+
   return (
-    <div className="relative group/guide inline-flex items-center">
-      <Info className="h-3.5 w-3.5 text-muted-foreground cursor-pointer hover:text-foreground transition-colors" />
-      <div className="
-        absolute left-5 top-0 z-50 hidden group-hover/guide:block
-        w-[340px] rounded-lg border bg-popover shadow-lg text-popover-foreground
-        p-4 space-y-4 text-left
-      ">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Priority Guide
-        </p>
-        {PRIORITY_DETAILS.map((p) => (
-          <div key={p.value} className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className={`text-sm font-semibold ${p.color}`}>{p.label}</span>
-              <span className="text-xs text-muted-foreground">— SLA: {p.sla}</span>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">{p.summary}</p>
-            <ul className="space-y-0.5 pl-3">
-              {p.examples.map((ex) => (
-                <li key={ex} className="text-xs text-foreground/80 list-disc list-inside leading-relaxed">
-                  {ex}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+    <div
+      className="fixed z-[9999] w-72 rounded-lg border bg-popover text-popover-foreground shadow-lg p-4 space-y-2 pointer-events-none"
+      style={{ top: state.top, left: safeLeft }}
+    >
+      <div className="flex items-baseline gap-2">
+        <span className={`text-sm font-semibold ${detail.color}`}>{detail.label}</span>
+        <span className="text-xs text-muted-foreground">SLA: {detail.sla}</span>
       </div>
+      <p className="text-xs text-muted-foreground leading-relaxed">{detail.summary}</p>
+      <ul className="space-y-1">
+        {detail.examples.map((ex) => (
+          <li key={ex} className="text-xs flex gap-1.5 leading-relaxed">
+            <span className="text-muted-foreground shrink-0 mt-0.5">•</span>
+            <span>{ex}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
+
+// ── Custom priority dropdown ───────────────────────────────────────────────────
+
+interface PrioritySelectorProps {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}
+
+function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) {
+  const [open, setOpen] = useState(false);
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setTooltip(null);
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  function handleInfoEnter(e: React.MouseEvent<HTMLButtonElement>, priority: PriorityValue) {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const TOOLTIP_W = 288;
+    // prefer right of icon, fall back to left if it would overflow
+    const leftRight = rect.right + 8;
+    const leftLeft = rect.left - TOOLTIP_W - 8;
+    const left = leftRight + TOOLTIP_W > window.innerWidth - 12 ? leftLeft : leftRight;
+    // prefer aligning top of tooltip with top of icon row, shift up if needed
+    const top = Math.min(rect.top, window.innerHeight - 320);
+    setTooltip({ priority, top, left });
+  }
+
+  const selected = PRIORITY_DETAILS.find((p) => p.value === value);
+
+  return (
+    <div ref={containerRef} className="relative">
+      {/* Trigger */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => { setOpen((o) => !o); setTooltip(null); }}
+        className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {selected ? (
+          <span>
+            <span className="font-medium">{selected.label}</span>
+            <span className="text-muted-foreground ml-1.5">— {selected.sla}</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground">Select priority level</span>
+        )}
+        <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md overflow-hidden">
+          {PRIORITY_DETAILS.map((p) => (
+            <div
+              key={p.value}
+              className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-accent text-sm select-none"
+              onClick={() => { onChange(p.value); setOpen(false); setTooltip(null); }}
+            >
+              <Check className={`h-4 w-4 shrink-0 ${value === p.value ? 'opacity-100' : 'opacity-0'}`} />
+              <span className="flex-1 min-w-0">
+                <span className="font-medium">{p.label}</span>
+                <span className="text-muted-foreground ml-1.5">— {p.sla}</span>
+              </span>
+              <button
+                type="button"
+                className="shrink-0 p-1 rounded hover:bg-accent-foreground/10 transition-colors"
+                onMouseEnter={(e) => handleInfoEnter(e, p.value)}
+                onMouseLeave={() => setTooltip(null)}
+                onClick={(e) => e.stopPropagation()}
+                tabIndex={-1}
+              >
+                <Info className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Tooltip — fixed to viewport, never clipped */}
+      {tooltip && <PriorityTooltip state={tooltip} />}
+    </div>
+  );
+}
+
+// ── File helpers ───────────────────────────────────────────────────────────────
 
 const ACCEPTED = '.jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.mp4';
 const MAX_SIZE_MB = 10;
@@ -149,6 +240,8 @@ function FileIcon({ name }: { name: string }) {
     return <FileText className="h-3.5 w-3.5 text-red-500 shrink-0" />;
   return <File className="h-3.5 w-3.5 text-muted-foreground shrink-0" />;
 }
+
+// ── Modal ──────────────────────────────────────────────────────────────────────
 
 interface CreateIssueModalProps {
   open: boolean;
@@ -170,24 +263,19 @@ export function CreateIssueModal({ open, onOpenChange, onSubmit }: CreateIssueMo
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(e.target.files ?? []);
     setFileError('');
-
     const oversized = picked.find((f) => {
       const isVideo = f.name.split('.').pop()?.toLowerCase() === 'mp4';
-      const limit = isVideo ? MAX_VIDEO_MB : MAX_SIZE_MB;
-      return f.size > limit * 1024 * 1024;
+      return f.size > (isVideo ? MAX_VIDEO_MB : MAX_SIZE_MB) * 1024 * 1024;
     });
     if (oversized) {
       const isVideo = oversized.name.split('.').pop()?.toLowerCase() === 'mp4';
       setFileError(`"${oversized.name}" exceeds ${isVideo ? MAX_VIDEO_MB : MAX_SIZE_MB} MB`);
       return;
     }
-
     setFiles((prev) => {
       const existing = new Set(prev.map((f) => f.name));
-      const added = picked.filter((f) => !existing.has(f.name));
-      return [...prev, ...added];
+      return [...prev, ...picked.filter((f) => !existing.has(f.name))];
     });
-
     if (inputRef.current) inputRef.current.value = '';
   }
 
@@ -273,29 +361,14 @@ export function CreateIssueModal({ open, onOpenChange, onSubmit }: CreateIssueMo
               name="severity"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-center gap-1.5">
-                    <FormLabel>Priority</FormLabel>
-                    <PriorityGuide />
-                  </div>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={isLoading}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority level" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {SEVERITY_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          <span className="font-medium">{opt.label}</span>
-                          <span className="text-muted-foreground ml-1">— {opt.description}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Priority</FormLabel>
+                  <FormControl>
+                    <PrioritySelector
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={isLoading}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -332,9 +405,7 @@ export function CreateIssueModal({ open, onOpenChange, onSubmit }: CreateIssueMo
                 Attach files
               </Button>
 
-              {fileError && (
-                <p className="text-xs text-destructive">{fileError}</p>
-              )}
+              {fileError && <p className="text-xs text-destructive">{fileError}</p>}
 
               {files.length > 0 && (
                 <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
@@ -363,12 +434,7 @@ export function CreateIssueModal({ open, onOpenChange, onSubmit }: CreateIssueMo
             </div>
 
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isLoading}
-              >
+              <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isLoading}>
