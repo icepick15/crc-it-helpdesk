@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Paperclip, X, FileText, Image, File, Video } from 'lucide-react';
+import { Loader2, Paperclip, X, FileText, Image, File, Video, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,6 +38,98 @@ const SEVERITY_OPTIONS = [
   { value: 'low',      label: 'Low',      description: 'Resolved within 24 hours' },
   { value: 'minor',    label: 'Minor',    description: 'Resolved within 48 hours' },
 ] as const;
+
+const PRIORITY_DETAILS = [
+  {
+    value: 'critical',
+    label: 'Critical',
+    sla: 'Within 6 hours',
+    color: 'text-red-600',
+    summary: 'Total business stoppage, data loss risks, or security emergencies affecting the entire organization.',
+    examples: [
+      'Core business applications inaccessible (SB2, DIVS, Helpdesk Portal, FilePortal)',
+      'Whole-office internet outage',
+      'Critical server or automation system unreachable',
+      'Active ransomware, malware outbreak, or confirmed data breach',
+      'Total failure or corruption of core business databases',
+      'Entire company unable to send or receive emails',
+    ],
+  },
+  {
+    value: 'high',
+    label: 'High',
+    sla: 'Within 12 hours',
+    color: 'text-orange-500',
+    summary: 'Degrades operations for entire departments or halts work for executive-level users without an easy workaround.',
+    examples: [
+      'VPN service outage — remote staff unable to connect',
+      'Main department printer down with no close alternative',
+      'C-Suite executive laptop, phone, or account lockout',
+      'Marketing, HR, or Finance unable to access shared drives',
+      'Entire department unable to make external calls (VoIP)',
+      'Sales team unable to update CRM records or pipeline data',
+    ],
+  },
+  {
+    value: 'low',
+    label: 'Low',
+    sla: 'Within 24 hours',
+    color: 'text-yellow-600',
+    summary: 'Standard break-fix issues or application bugs affecting individual users. Work can usually continue via a temporary workaround.',
+    examples: [
+      'Single user Active Directory account locked or password expired',
+      'Microsoft Office errors on a single machine',
+      'Broken mouse, keyboard, or secondary monitor failure',
+      'Outlook failing to sync on one user\'s laptop',
+      'Slow workstation due to memory leakage or background processes',
+      'Antivirus showing outdated definitions on a single PC',
+    ],
+  },
+  {
+    value: 'minor',
+    label: 'Minor',
+    sla: 'Within 48 hours',
+    color: 'text-blue-500',
+    summary: 'Non-urgent service requests, cosmetic bugs, or proactive maintenance queries that do not impede day-to-day operations.',
+    examples: [
+      'Installation of non-essential software (Adobe Acrobat, VLC, etc.)',
+      '"How-to" inquiries (archiving folders, configuring email signatures, etc.)',
+    ],
+  },
+] as const;
+
+function PriorityGuide() {
+  return (
+    <div className="relative group/guide inline-flex items-center">
+      <Info className="h-3.5 w-3.5 text-muted-foreground cursor-pointer hover:text-foreground transition-colors" />
+      <div className="
+        absolute left-5 top-0 z-50 hidden group-hover/guide:block
+        w-[340px] rounded-lg border bg-popover shadow-lg text-popover-foreground
+        p-4 space-y-4 text-left
+      ">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Priority Guide
+        </p>
+        {PRIORITY_DETAILS.map((p) => (
+          <div key={p.value} className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-semibold ${p.color}`}>{p.label}</span>
+              <span className="text-xs text-muted-foreground">— SLA: {p.sla}</span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">{p.summary}</p>
+            <ul className="space-y-0.5 pl-3">
+              {p.examples.map((ex) => (
+                <li key={ex} className="text-xs text-foreground/80 list-disc list-inside leading-relaxed">
+                  {ex}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const ACCEPTED = '.jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip,.mp4';
 const MAX_SIZE_MB = 10;
@@ -181,7 +273,10 @@ export function CreateIssueModal({ open, onOpenChange, onSubmit }: CreateIssueMo
               name="severity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Priority</FormLabel>
+                  <div className="flex items-center gap-1.5">
+                    <FormLabel>Priority</FormLabel>
+                    <PriorityGuide />
+                  </div>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
