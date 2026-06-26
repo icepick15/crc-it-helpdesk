@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Paperclip, X, FileText, Image, File, Video, Info, ChevronDown, Check } from 'lucide-react';
@@ -133,32 +134,68 @@ interface PrioritySelectorProps {
   disabled?: boolean;
 }
 
+interface DropdownPos {
+  top: number;
+  left: number;
+  width: number;
+}
+
 function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) {
   const [open, setOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Close on outside click (covers trigger, dropdown, and tooltip)
   useEffect(() => {
     if (!open) return;
-    function onClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setTooltip(null);
-      }
+    function onPointerDown(e: MouseEvent) {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setOpen(false);
+      setTooltip(null);
     }
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
   }, [open]);
+
+  // Reposition / close on scroll or resize so it never drifts
+  useEffect(() => {
+    if (!open) return;
+    const close = () => { setOpen(false); setTooltip(null); };
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [open]);
+
+  function handleTriggerClick() {
+    if (disabled) return;
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const OPTION_H = 44;   // px per option row
+      const DROPDOWN_H = PRIORITY_DETAILS.length * OPTION_H + 8;
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const top = spaceBelow >= DROPDOWN_H
+        ? rect.bottom + 4
+        : rect.top - DROPDOWN_H - 4;
+      setDropdownPos({ top, left: rect.left, width: rect.width });
+    }
+    setOpen((o) => !o);
+    setTooltip(null);
+  }
 
   function handleInfoEnter(e: React.MouseEvent<HTMLButtonElement>, priority: PriorityValue) {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
     const TOOLTIP_W = 288;
-    // prefer right of icon, fall back to left if it would overflow
     const leftRight = rect.right + 8;
     const leftLeft = rect.left - TOOLTIP_W - 8;
     const left = leftRight + TOOLTIP_W > window.innerWidth - 12 ? leftLeft : leftRight;
-    // prefer aligning top of tooltip with top of icon row, shift up if needed
     const top = Math.min(rect.top, window.innerHeight - 320);
     setTooltip({ priority, top, left });
   }
@@ -166,13 +203,14 @@ function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) 
   const selected = PRIORITY_DETAILS.find((p) => p.value === value);
 
   return (
-    <div ref={containerRef} className="relative">
+    <>
       {/* Trigger */}
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
-        onClick={() => { setOpen((o) => !o); setTooltip(null); }}
-        className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={handleTriggerClick}
+        className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
       >
         {selected ? (
           <span>
@@ -185,13 +223,24 @@ function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) 
         <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
       </button>
 
-      {/* Dropdown */}
-      {open && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md overflow-hidden">
+      {/* Dropdown — portalled to body so dialog overflow:hidden never clips it */}
+      {open && dropdownPos && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            zIndex: 9999,
+          }}
+          className="rounded-md border bg-popover text-popover-foreground shadow-lg overflow-hidden"
+        >
           {PRIORITY_DETAILS.map((p) => (
             <div
               key={p.value}
               className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-accent text-sm select-none"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => { onChange(p.value); setOpen(false); setTooltip(null); }}
             >
               <Check className={`h-4 w-4 shrink-0 ${value === p.value ? 'opacity-100' : 'opacity-0'}`} />
@@ -211,12 +260,13 @@ function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) 
               </button>
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Tooltip — fixed to viewport, never clipped */}
-      {tooltip && <PriorityTooltip state={tooltip} />}
-    </div>
+      {/* Tooltip — also portalled, fixed to viewport */}
+      {tooltip && createPortal(<PriorityTooltip state={tooltip} />, document.body)}
+    </>
   );
 }
 
