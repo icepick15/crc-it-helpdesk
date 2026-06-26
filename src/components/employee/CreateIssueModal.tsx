@@ -107,7 +107,6 @@ function PriorityTooltip({ pos }: { pos: TooltipPos }) {
     >
       <div className="flex items-baseline gap-2">
         <span className={`text-sm font-semibold ${detail.color}`}>{detail.label}</span>
-        <span className="text-xs text-muted-foreground">SLA: {detail.sla}</span>
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed">{detail.summary}</p>
       <ul className="space-y-1">
@@ -220,10 +219,7 @@ function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) 
         className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
       >
         {selected ? (
-          <span>
-            <span className="font-medium">{selected.label}</span>
-            <span className="text-muted-foreground ml-1.5">— {selected.sla}</span>
-          </span>
+          <span className="font-medium">{selected.label}</span>
         ) : (
           <span className="text-muted-foreground">Select priority level</span>
         )}
@@ -250,10 +246,7 @@ function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) 
               <Check
                 className={`h-4 w-4 shrink-0 ${value === p.value ? 'opacity-100' : 'opacity-0'}`}
               />
-              <span className="flex-1 min-w-0">
-                <span className="font-medium">{p.label}</span>
-                <span className="text-muted-foreground ml-1.5">— {p.sla}</span>
-              </span>
+              <span className="flex-1 min-w-0 font-medium">{p.label}</span>
               <button
                 type="button"
                 className="shrink-0 p-1 rounded hover:bg-accent-foreground/10 transition-colors"
