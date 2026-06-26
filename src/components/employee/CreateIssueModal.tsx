@@ -94,15 +94,16 @@ interface TooltipPos {
   priority: PriorityValue;
   top: number;   // px from container top
   left: number;  // px from container left (can be negative to go left)
+  maxH: number;  // max-height so it never overflows the screen
 }
 
-function PriorityTooltip({ pos, containerWidth }: { pos: TooltipPos; containerWidth: number }) {
+function PriorityTooltip({ pos }: { pos: TooltipPos }) {
   const detail = PRIORITY_DETAILS.find((p) => p.value === pos.priority);
   if (!detail) return null;
   return (
     <div
-      className="absolute z-[200] w-72 rounded-lg border bg-popover text-popover-foreground shadow-lg p-4 space-y-2 pointer-events-none"
-      style={{ top: pos.top, left: pos.left }}
+      className="absolute z-[200] w-72 rounded-lg border bg-popover text-popover-foreground shadow-lg p-4 space-y-2 pointer-events-none overflow-y-auto"
+      style={{ top: pos.top, left: pos.left, maxHeight: pos.maxH }}
     >
       <div className="flex items-baseline gap-2">
         <span className={`text-sm font-semibold ${detail.color}`}>{detail.label}</span>
@@ -170,20 +171,43 @@ function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) 
 
     const iconRect = e.currentTarget.getBoundingClientRect();
     const containerRect = containerRef.current.getBoundingClientRect();
+    const MARGIN = 12;
 
-    // align tooltip top with the icon row top, relative to container
-    const relTop = iconRect.top - containerRect.top;
-
-    // try right first, flip left if it would overflow viewport
+    // ── Horizontal: prefer right of icon, flip left if it overflows ──
     const rightOf = iconRect.right - containerRect.left + 8;
-    const leftOf = iconRect.left - containerRect.left - TOOLTIP_W - 8;
-    const relLeft = iconRect.right + 8 + TOOLTIP_W > window.innerWidth - 12 ? leftOf : rightOf;
+    const leftOf  = iconRect.left  - containerRect.left - TOOLTIP_W - 8;
+    const relLeft  = iconRect.right + 8 + TOOLTIP_W > window.innerWidth - MARGIN
+      ? leftOf
+      : rightOf;
 
-    setTooltip({ priority, top: relTop, left: relLeft });
+    // ── Vertical: try opening downward from icon top; flip up if overflow ──
+    const detail = PRIORITY_DETAILS.find((p) => p.value === priority)!;
+    // rough height: header + summary + each example row + padding
+    const estimatedH = 64 + 48 + detail.examples.length * 40;
+    const spaceBelow = window.innerHeight - iconRect.top - MARGIN;
+    const spaceAbove = iconRect.bottom - MARGIN;
+    const maxH = Math.min(estimatedH, window.innerHeight - MARGIN * 2);
+
+    let relTop: number;
+    if (spaceBelow >= estimatedH) {
+      // fits below — align tooltip top to icon top
+      relTop = iconRect.top - containerRect.top;
+    } else if (spaceAbove >= estimatedH) {
+      // fits above — align tooltip bottom to icon bottom
+      relTop = iconRect.bottom - containerRect.top - estimatedH;
+    } else {
+      // neither fits fully — anchor to whichever side has more room, let maxH clip
+      if (spaceBelow >= spaceAbove) {
+        relTop = iconRect.top - containerRect.top;
+      } else {
+        relTop = iconRect.bottom - containerRect.top - Math.min(estimatedH, spaceAbove);
+      }
+    }
+
+    setTooltip({ priority, top: relTop, left: relLeft, maxH });
   }
 
   const selected = PRIORITY_DETAILS.find((p) => p.value === value);
-  const containerW = containerRef.current?.getBoundingClientRect().width ?? 400;
 
   return (
     <div ref={containerRef} className="relative">
@@ -246,7 +270,7 @@ function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) 
       )}
 
       {/* Tooltip — absolute relative to this container, escapes overflow because dialog has no overflow:hidden */}
-      {tooltip && <PriorityTooltip pos={tooltip} containerWidth={containerW} />}
+      {tooltip && <PriorityTooltip pos={tooltip} />}
     </div>
   );
 }
