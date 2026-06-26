@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Paperclip, X, FileText, Image, File, Video, Info, ChevronDown, Check } from 'lucide-react';
@@ -69,7 +68,7 @@ const PRIORITY_DETAILS = [
       'Single user Active Directory account locked or password expired',
       'Microsoft Office errors on a single machine',
       'Broken mouse, keyboard, or secondary monitor failure',
-      'Outlook failing to sync on one user\'s laptop',
+      "Outlook failing to sync on one user's laptop",
       'Slow workstation due to memory leakage or background processes',
       'Antivirus showing outdated definitions on a single PC',
     ],
@@ -89,25 +88,21 @@ const PRIORITY_DETAILS = [
 
 type PriorityValue = typeof PRIORITY_DETAILS[number]['value'];
 
-// ── Tooltip rendered at a fixed screen position ────────────────────────────────
+// ── Tooltip (absolute-positioned relative to the selector container) ───────────
 
-interface TooltipState {
+interface TooltipPos {
   priority: PriorityValue;
-  top: number;
-  left: number;
+  top: number;   // px from container top
+  left: number;  // px from container left (can be negative to go left)
 }
 
-function PriorityTooltip({ state }: { state: TooltipState }) {
-  const detail = PRIORITY_DETAILS.find((p) => p.value === state.priority);
+function PriorityTooltip({ pos, containerWidth }: { pos: TooltipPos; containerWidth: number }) {
+  const detail = PRIORITY_DETAILS.find((p) => p.value === pos.priority);
   if (!detail) return null;
-
-  const TOOLTIP_W = 288;
-  const safeLeft = Math.min(state.left, window.innerWidth - TOOLTIP_W - 12);
-
   return (
     <div
-      className="fixed z-[9999] w-72 rounded-lg border bg-popover text-popover-foreground shadow-lg p-4 space-y-2 pointer-events-none"
-      style={{ top: state.top, left: safeLeft }}
+      className="absolute z-[200] w-72 rounded-lg border bg-popover text-popover-foreground shadow-lg p-4 space-y-2 pointer-events-none"
+      style={{ top: pos.top, left: pos.left }}
     >
       <div className="flex items-baseline gap-2">
         <span className={`text-sm font-semibold ${detail.color}`}>{detail.label}</span>
@@ -134,56 +129,36 @@ interface PrioritySelectorProps {
   disabled?: boolean;
 }
 
-interface DropdownPos {
-  top: number;
-  left: number;
-  width: number;
-}
+const OPTION_H = 44;
+const DROPDOWN_H = PRIORITY_DETAILS.length * OPTION_H + 4;
+const TOOLTIP_W = 288;
 
 function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) {
   const [open, setOpen] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null);
-  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [openUp, setOpenUp] = useState(false);
+  const [tooltip, setTooltip] = useState<TooltipPos | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click (covers trigger, dropdown, and tooltip)
+  // Close when clicking outside the whole component
   useEffect(() => {
     if (!open) return;
-    function onPointerDown(e: MouseEvent) {
-      const target = e.target as Node;
-      if (triggerRef.current?.contains(target)) return;
-      if (dropdownRef.current?.contains(target)) return;
-      setOpen(false);
-      setTooltip(null);
+    function onMouseDown(e: MouseEvent) {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setTooltip(null);
+      }
     }
-    document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [open]);
-
-  // Reposition / close on scroll or resize so it never drifts
-  useEffect(() => {
-    if (!open) return;
-    const close = () => { setOpen(false); setTooltip(null); };
-    window.addEventListener('resize', close);
-    window.addEventListener('scroll', close, true);
-    return () => {
-      window.removeEventListener('resize', close);
-      window.removeEventListener('scroll', close, true);
-    };
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
   }, [open]);
 
   function handleTriggerClick() {
     if (disabled) return;
     if (!open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      const OPTION_H = 44;   // px per option row
-      const DROPDOWN_H = PRIORITY_DETAILS.length * OPTION_H + 8;
       const spaceBelow = window.innerHeight - rect.bottom - 8;
-      const top = spaceBelow >= DROPDOWN_H
-        ? rect.bottom + 4
-        : rect.top - DROPDOWN_H - 4;
-      setDropdownPos({ top, left: rect.left, width: rect.width });
+      setOpenUp(spaceBelow < DROPDOWN_H);
     }
     setOpen((o) => !o);
     setTooltip(null);
@@ -191,19 +166,27 @@ function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) 
 
   function handleInfoEnter(e: React.MouseEvent<HTMLButtonElement>, priority: PriorityValue) {
     e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const TOOLTIP_W = 288;
-    const leftRight = rect.right + 8;
-    const leftLeft = rect.left - TOOLTIP_W - 8;
-    const left = leftRight + TOOLTIP_W > window.innerWidth - 12 ? leftLeft : leftRight;
-    const top = Math.min(rect.top, window.innerHeight - 320);
-    setTooltip({ priority, top, left });
+    if (!containerRef.current) return;
+
+    const iconRect = e.currentTarget.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    // align tooltip top with the icon row top, relative to container
+    const relTop = iconRect.top - containerRect.top;
+
+    // try right first, flip left if it would overflow viewport
+    const rightOf = iconRect.right - containerRect.left + 8;
+    const leftOf = iconRect.left - containerRect.left - TOOLTIP_W - 8;
+    const relLeft = iconRect.right + 8 + TOOLTIP_W > window.innerWidth - 12 ? leftOf : rightOf;
+
+    setTooltip({ priority, top: relTop, left: relLeft });
   }
 
   const selected = PRIORITY_DETAILS.find((p) => p.value === value);
+  const containerW = containerRef.current?.getBoundingClientRect().width ?? 400;
 
   return (
-    <>
+    <div ref={containerRef} className="relative">
       {/* Trigger */}
       <button
         ref={triggerRef}
@@ -223,27 +206,26 @@ function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) 
         <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
       </button>
 
-      {/* Dropdown — portalled to body so dialog overflow:hidden never clips it */}
-      {open && dropdownPos && createPortal(
+      {/* Dropdown — absolute so it stays inside Radix's focus scope (no pointer-event blocking) */}
+      {open && (
         <div
-          ref={dropdownRef}
-          style={{
-            position: 'fixed',
-            top: dropdownPos.top,
-            left: dropdownPos.left,
-            width: dropdownPos.width,
-            zIndex: 9999,
-          }}
-          className="rounded-md border bg-popover text-popover-foreground shadow-lg overflow-hidden"
+          className={`absolute left-0 right-0 z-[100] rounded-md border bg-popover text-popover-foreground shadow-lg overflow-hidden ${
+            openUp ? 'bottom-full mb-1' : 'top-full mt-1'
+          }`}
         >
           {PRIORITY_DETAILS.map((p) => (
             <div
               key={p.value}
               className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-accent text-sm select-none"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { onChange(p.value); setOpen(false); setTooltip(null); }}
+              onClick={() => {
+                onChange(p.value);
+                setOpen(false);
+                setTooltip(null);
+              }}
             >
-              <Check className={`h-4 w-4 shrink-0 ${value === p.value ? 'opacity-100' : 'opacity-0'}`} />
+              <Check
+                className={`h-4 w-4 shrink-0 ${value === p.value ? 'opacity-100' : 'opacity-0'}`}
+              />
               <span className="flex-1 min-w-0">
                 <span className="font-medium">{p.label}</span>
                 <span className="text-muted-foreground ml-1.5">— {p.sla}</span>
@@ -260,13 +242,12 @@ function PrioritySelector({ value, onChange, disabled }: PrioritySelectorProps) 
               </button>
             </div>
           ))}
-        </div>,
-        document.body
+        </div>
       )}
 
-      {/* Tooltip — also portalled, fixed to viewport */}
-      {tooltip && createPortal(<PriorityTooltip state={tooltip} />, document.body)}
-    </>
+      {/* Tooltip — absolute relative to this container, escapes overflow because dialog has no overflow:hidden */}
+      {tooltip && <PriorityTooltip pos={tooltip} containerWidth={containerW} />}
+    </div>
   );
 }
 
@@ -342,7 +323,7 @@ export function CreateIssueModal({ open, onOpenChange, onSubmit }: CreateIssueMo
       setFileError('');
       onOpenChange(false);
     } catch {
-      // Error handled in parent
+      // error handled in parent
     } finally {
       setIsLoading(false);
     }
@@ -359,7 +340,8 @@ export function CreateIssueModal({ open, onOpenChange, onSubmit }: CreateIssueMo
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      {/* overflow-visible lets the priority dropdown extend below the dialog boundary */}
+      <DialogContent className="sm:max-w-[500px] overflow-visible">
         <DialogHeader>
           <DialogTitle>Create New Issue</DialogTitle>
           <DialogDescription>
