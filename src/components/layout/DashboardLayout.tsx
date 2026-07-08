@@ -9,9 +9,10 @@ import { Loader2 } from 'lucide-react';
 interface DashboardLayoutProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  noPadding?: boolean;
 }
 
-export function DashboardLayout({ children, requireAdmin = false }: DashboardLayoutProps) {
+export function DashboardLayout({ children, requireAdmin = false, noPadding = false }: DashboardLayoutProps) {
   const { isAuthenticated, loading, role } = useAuth();
   const router = useRouter();
 
@@ -44,7 +45,7 @@ export function DashboardLayout({ children, requireAdmin = false }: DashboardLay
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container py-6">{children}</main>
+      <main className={noPadding ? 'overflow-hidden' : 'container py-6'}>{children}</main>
     </div>
   );
 }

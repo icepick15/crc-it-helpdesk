@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  Loader2, Send, CheckCircle, RotateCcw, ArrowRightLeft,
+  Loader2, Send, CheckCircle, ClipboardCheck, RotateCcw, ArrowRightLeft,
   UserCheck, Paperclip, X, FileText, Image, File, Video,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,7 @@ interface ReplyFormProps {
   isResolved: boolean;
   isAssignee: boolean;
   isUnassigned: boolean;
+  canTransfer: boolean;
   currentAssigneeId?: string;
   resolvedAt?: string;
   resolvedByName?: string | null;
@@ -60,6 +61,7 @@ export function ReplyForm({
   onResolve,
   onReopen,
   onClaim,
+  canTransfer,
   onTransfer,
   isResolved,
   isAssignee,
@@ -319,26 +321,38 @@ export function ReplyForm({
                 variant="outline"
                 onClick={handleResolve}
                 disabled={isReplying || isResolving}
-                className="bg-success/10 hover:bg-success/20 text-success border-success/30"
+                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:hover:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800"
               >
                 {isResolving ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Resolving...</>
                 ) : (
-                  <><CheckCircle className="mr-2 h-4 w-4" />Mark Resolved</>
+                  <><ClipboardCheck className="mr-2 h-4 w-4" />Mark Resolved</>
                 )}
               </Button>
 
               {onTransfer && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowTransferModal(true)}
-                  disabled={isReplying || isResolving}
-                  className="border-blue-400/40 text-blue-600 hover:bg-blue-50"
-                >
-                  <ArrowRightLeft className="mr-2 h-4 w-4" />
-                  Transfer
-                </Button>
+                <div className="flex flex-col items-start gap-0.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowTransferModal(true)}
+                    disabled={isReplying || isResolving || !canTransfer}
+                    title={
+                      !canTransfer
+                        ? 'Transfer is locked — more than 50% of the SLA window has passed'
+                        : undefined
+                    }
+                    className="border-blue-400/40 text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950"
+                  >
+                    <ArrowRightLeft className="mr-2 h-4 w-4" />
+                    Transfer
+                  </Button>
+                  {!canTransfer && (
+                    <span className="text-[11px] text-muted-foreground leading-tight">
+                      SLA past 50% — transfer locked
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           </form>

@@ -24,15 +24,12 @@ interface AllIssuesTableProps {
   onClaim?: (issueId: string) => Promise<void>;
 }
 
-// Defined outside the component so it is never re-created on renders
 function AssigneeBadge({ issue }: { issue: Issue }) {
   if (issue.assignedToName) {
-    return (
-      <span className="text-sm font-medium text-foreground">{issue.assignedToName}</span>
-    );
+    return <span className="text-xs font-medium text-foreground truncate">{issue.assignedToName}</span>;
   }
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300">
+    <span className="inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
       Unassigned
     </span>
   );
@@ -50,63 +47,60 @@ const IssueRow = memo(function IssueRow({ issue, onIssueClick, onClaim }: IssueR
       className="cursor-pointer hover:bg-muted/50 transition-colors"
       onClick={() => onIssueClick(issue)}
     >
-      <TableCell className="font-mono text-sm text-muted-foreground">
+      <TableCell className="py-2 px-3 font-mono text-xs text-muted-foreground whitespace-nowrap">
         #{issue.id}
       </TableCell>
-      <TableCell>
-        <div className="font-medium truncate max-w-[280px] lg:max-w-[360px]">
+      <TableCell className="py-2 px-3">
+        <span className="text-xs font-medium truncate block max-w-[240px] lg:max-w-[320px]">
           {issue.title}
-        </div>
-        <div className="text-sm text-muted-foreground truncate max-w-[280px] lg:max-w-[360px]">
-          {issue.description}
-        </div>
+        </span>
       </TableCell>
-      <TableCell>
-        <div className="font-medium truncate">{issue.employeeName}</div>
-        <div className="text-sm text-muted-foreground truncate">
-          {issue.employeeEmail}
-        </div>
+      <TableCell className="py-2 px-3">
+        <span className="text-xs font-medium truncate block max-w-[120px]">
+          {issue.employeeName}
+        </span>
       </TableCell>
-      <TableCell>
+      <TableCell className="py-2 px-3">
         <SeverityBadge severity={issue.severity} />
       </TableCell>
-      <TableCell>
+      <TableCell className="py-2 px-3">
         <StatusBadge status={issue.status} />
       </TableCell>
-      <TableCell onClick={(e) => e.stopPropagation()}>
+      <TableCell className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
         {!issue.assignedToName && onClaim ? (
           <Button
             size="sm"
             variant="outline"
-            className="h-7 text-xs border-amber-400/50 text-amber-700 hover:bg-amber-50 gap-1"
+            className="h-6 text-[11px] px-2 border-amber-400/50 text-amber-700 hover:bg-amber-50 gap-1"
             onClick={(e) => {
               e.stopPropagation();
               onClaim(issue.id);
             }}
           >
-            <UserCheck className="h-3.5 w-3.5" />
+            <UserCheck className="h-3 w-3" />
             Claim
           </Button>
         ) : (
           <AssigneeBadge issue={issue} />
         )}
       </TableCell>
-      <TableCell>
+      <TableCell className="py-2 px-3">
         {issue.status === 'pending' && (
-          <SLABadge slaStatus={issue.slaStatus} createdAt={issue.createdAt} slaResolveBy={issue.slaResolveBy} />
+          <SLABadge
+            slaStatus={issue.slaStatus}
+            createdAt={issue.createdAt}
+            slaResolveBy={issue.slaResolveBy}
+          />
         )}
       </TableCell>
-      <TableCell className="text-center">
+      <TableCell className="py-2 px-3 text-center">
         <div className="flex items-center justify-center gap-1 text-muted-foreground">
-          <MessageSquare className="h-4 w-4" />
-          <span>{issue.replyCount}</span>
+          <MessageSquare className="h-3 w-3" />
+          <span className="text-xs">{issue.replyCount}</span>
         </div>
       </TableCell>
-      <TableCell className="text-sm text-muted-foreground">
+      <TableCell className="py-2 px-3 text-xs text-muted-foreground whitespace-nowrap">
         {formatDate(issue.createdAt)}
-      </TableCell>
-      <TableCell className="text-sm text-muted-foreground">
-        {issue.resolvedAt ? formatDate(issue.resolvedAt) : '-'}
       </TableCell>
     </TableRow>
   );
@@ -115,47 +109,40 @@ const IssueRow = memo(function IssueRow({ issue, onIssueClick, onClaim }: IssueR
 const MobileIssueCard = memo(function MobileIssueCard({ issue, onIssueClick, onClaim }: IssueRowProps) {
   return (
     <div
-      className="border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors active:bg-muted"
+      className="border rounded-lg p-3 cursor-pointer hover:bg-muted/50 transition-colors active:bg-muted"
       onClick={() => onIssueClick(issue)}
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
+      <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-mono text-muted-foreground">
-            #{issue.id}
-          </span>
+          <span className="text-xs font-mono text-muted-foreground">#{issue.id}</span>
           <StatusBadge status={issue.status} />
           <SeverityBadge severity={issue.severity} />
         </div>
-        <div className="flex items-center gap-1 text-muted-foreground text-sm">
-          <MessageSquare className="h-3.5 w-3.5" />
+        <div className="flex items-center gap-1 text-muted-foreground text-xs">
+          <MessageSquare className="h-3 w-3" />
           <span>{issue.replyCount}</span>
         </div>
       </div>
-      <h3 className="font-medium mb-1 line-clamp-1">{issue.title}</h3>
-      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-        {issue.description}
-      </p>
+      <h3 className="text-xs font-medium mb-1 line-clamp-1">{issue.title}</h3>
       {issue.status === 'pending' && (
-        <div className="mb-2">
+        <div className="mb-1.5">
           <SLABadge slaStatus={issue.slaStatus} createdAt={issue.createdAt} slaResolveBy={issue.slaResolveBy} />
         </div>
       )}
-      <div className="flex items-center justify-between text-sm gap-2">
-        <div>
-          <span className="font-medium">{issue.employeeName}</span>
-        </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium">{issue.employeeName}</span>
         <div className="flex items-center gap-2">
           {!issue.assignedToName && onClaim ? (
             <Button
               size="sm"
               variant="outline"
-              className="h-7 text-xs border-amber-400/50 text-amber-700 hover:bg-amber-50 gap-1"
+              className="h-6 text-[11px] px-2 border-amber-400/50 text-amber-700 hover:bg-amber-50 gap-1"
               onClick={(e) => {
                 e.stopPropagation();
                 onClaim(issue.id);
               }}
             >
-              <UserCheck className="h-3.5 w-3.5" />
+              <UserCheck className="h-3 w-3" />
               Claim
             </Button>
           ) : (
@@ -163,14 +150,7 @@ const MobileIssueCard = memo(function MobileIssueCard({ issue, onIssueClick, onC
           )}
         </div>
       </div>
-      <div className="text-xs text-muted-foreground mt-2">
-        {formatDate(issue.createdAt)}
-        {issue.resolvedAt && (
-          <span className="text-green-600 ml-2">
-            Resolved: {formatDate(issue.resolvedAt)}
-          </span>
-        )}
-      </div>
+      <div className="text-[11px] text-muted-foreground mt-1.5">{formatDate(issue.createdAt)}</div>
     </div>
   );
 });
@@ -192,32 +172,29 @@ export const AllIssuesTable = memo(function AllIssuesTable({
   if (issues.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
-        <Inbox className="h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="font-semibold text-lg mb-1">No issues found</h3>
-        <p className="text-muted-foreground">
-          No issues match the current filters
-        </p>
+        <Inbox className="h-10 w-10 text-muted-foreground mb-3" />
+        <h3 className="font-semibold mb-1">No issues found</h3>
+        <p className="text-sm text-muted-foreground">No issues match the current filters</p>
       </div>
     );
   }
 
   return (
     <>
-      {/* Desktop Table View */}
+      {/* Desktop table */}
       <div className="hidden md:block border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-[70px] min-w-[70px]">ID</TableHead>
-              <TableHead className="min-w-[200px]">Title</TableHead>
-              <TableHead className="w-[160px] min-w-[140px]">Employee</TableHead>
-              <TableHead className="w-[90px] min-w-[80px]">Priority</TableHead>
-              <TableHead className="w-[100px] min-w-[90px]">Status</TableHead>
-              <TableHead className="w-[150px] min-w-[130px]">Assigned To</TableHead>
-              <TableHead className="w-[130px] min-w-[110px]">SLA</TableHead>
-              <TableHead className="w-[70px] min-w-[60px] text-center">Replies</TableHead>
-              <TableHead className="w-[100px] min-w-[90px]">Created</TableHead>
-              <TableHead className="w-[100px] min-w-[90px]">Resolved</TableHead>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead className="py-2 px-3 text-xs w-[60px]">ID</TableHead>
+              <TableHead className="py-2 px-3 text-xs">Title</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[130px]">Employee</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[80px]">Priority</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[90px]">Status</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[140px]">Assigned To</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[110px]">SLA</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[60px] text-center">💬</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[90px]">Created</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -233,8 +210,8 @@ export const AllIssuesTable = memo(function AllIssuesTable({
         </Table>
       </div>
 
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-3">
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-2">
         {issues.map((issue) => (
           <MobileIssueCard
             key={issue.id}

@@ -28,15 +28,20 @@ export default function AdminDashboard() {
 
   // Filter issues based on search query
   const filteredIssues = useMemo(() => {
-    if (!searchQuery.trim()) return issues;
+    const query = searchQuery.trim().toLowerCase();
+    const filtered = query
+      ? issues.filter(
+          (issue) =>
+            issue.employeeName.toLowerCase().includes(query) ||
+            issue.employeeEmail.toLowerCase().includes(query) ||
+            issue.title.toLowerCase().includes(query) ||
+            issue.id.includes(query)
+        )
+      : issues;
 
-    const query = searchQuery.toLowerCase();
-    return issues.filter(
-      (issue) =>
-        issue.employeeName.toLowerCase().includes(query) ||
-        issue.employeeEmail.toLowerCase().includes(query) ||
-        issue.title.toLowerCase().includes(query) ||
-        issue.id.includes(query)
+    // Newest tickets always at the top
+    return [...filtered].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }, [issues, searchQuery]);
 
