@@ -139,6 +139,7 @@ function transformBackendUser(backendUser: BackendUser): User {
 
   return {
     id: String(backendUser.id),
+    crcId: backendUser.crc_id,
     email,
     name: fullName,
     role: mappedRole,
