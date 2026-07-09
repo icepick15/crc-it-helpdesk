@@ -8,7 +8,6 @@ export type SLAStatus = 'unclaimed' | 'unclaimed_breach' | 'on_track' | 'warning
 
 export interface User {
   id: string;
-  crcId?: string;
   email: string;
   name: string;
   role: UserRole;
@@ -19,7 +18,6 @@ export interface User {
 // Backend API Types (Django REST Framework)
 export interface BackendUser {
   id: number;
-  crc_id?: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -48,6 +46,7 @@ export interface Attachment {
 
 export interface BackendIssue {
   id: number;
+  crc_id?: string;
   title: string;
   description: string;
   status: 'pending' | 'completed';
@@ -100,6 +99,7 @@ export interface Reply {
 
 export interface Issue {
   id: string;
+  crcId?: string;
   title: string;
   description: string;
   status: IssueStatus;

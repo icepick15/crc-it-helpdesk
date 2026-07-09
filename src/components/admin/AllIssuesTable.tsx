@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { SeverityBadge } from '@/components/shared/SeverityBadge';
 import { SLABadge } from '@/components/shared/SLABadge';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatIssueId } from '@/lib/utils';
 import type { Issue } from '@/lib/types';
 
 interface AllIssuesTableProps {
@@ -48,7 +48,7 @@ const IssueRow = memo(function IssueRow({ issue, onIssueClick, onClaim }: IssueR
       onClick={() => onIssueClick(issue)}
     >
       <TableCell className="py-2 px-3 font-mono text-xs text-muted-foreground whitespace-nowrap">
-        #{issue.id}
+        {formatIssueId(issue)}
       </TableCell>
       <TableCell className="py-2 px-3">
         <span className="text-xs font-medium truncate block max-w-[240px] lg:max-w-[320px]">
@@ -114,7 +114,7 @@ const MobileIssueCard = memo(function MobileIssueCard({ issue, onIssueClick, onC
     >
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-mono text-muted-foreground">#{issue.id}</span>
+          <span className="text-xs font-mono text-muted-foreground">{formatIssueId(issue)}</span>
           <StatusBadge status={issue.status} />
           <SeverityBadge severity={issue.severity} />
         </div>

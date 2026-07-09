@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { formatIssueId } from '@/lib/utils';
 import type { Issue, StatusFilter, IssueSeverity } from '@/lib/types';
 
 interface GenerateReportModalProps {
@@ -122,7 +123,7 @@ async function generateExcel(
       issue.slaAcknowledged ? 'Yes' : 'No';
 
     const row = worksheet.addRow({
-      id:           `  ${issue.id}  `,
+      id:           `  ${formatIssueId(issue)}  `,
       title:        issue.title,
       description:  issue.description,
       employeeName: issue.employeeName,

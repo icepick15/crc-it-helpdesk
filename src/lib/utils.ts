@@ -43,6 +43,12 @@ export function groupIssuesByMonth(issues: Issue[]): MonthlyIssueGroup[] {
     }));
 }
 
+// Ticket number in company format (e.g. CRC-012); falls back to #id if the
+// backend hasn't been redeployed with crc_id yet.
+export function formatIssueId(issue: Pick<Issue, "id" | "crcId">): string {
+  return issue.crcId ?? `#${issue.id}`;
+}
+
 export function formatDate(dateString: string): string {
   return format(parseISO(dateString), "MMM d, yyyy");
 }

@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/form';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { AttachmentList } from '@/components/shared/AttachmentList';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, formatIssueId } from '@/lib/utils';
 import { replySchema, type ReplyFormData } from '@/lib/validations';
 import type { Issue } from '@/lib/types';
 
@@ -116,7 +116,7 @@ export function IssueDetailsModal({
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm text-muted-foreground">#{issue.id}</span>
+            <span className="text-sm text-muted-foreground">{formatIssueId(issue)}</span>
             <StatusBadge status={issue.status} />
           </div>
           <DialogTitle className="text-xl">{issue.title}</DialogTitle>

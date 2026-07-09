@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatIssueId } from '@/lib/utils';
 import type { MonthlyIssueGroup as MonthlyIssueGroupType, Issue } from '@/lib/types';
 
 interface MonthlyIssueGroupProps {
@@ -43,7 +43,7 @@ export function MonthlyIssueGroup({ group, onIssueClick }: MonthlyIssueGroupProp
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm text-muted-foreground">#{issue.id}</span>
+                  <span className="text-sm text-muted-foreground">{formatIssueId(issue)}</span>
                   <StatusBadge status={issue.status} />
                 </div>
                 <h3 className="font-medium truncate">{issue.title}</h3>

@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { issuesAPI, messagesAPI, attachmentsAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { formatDateTime } from '@/lib/utils';
+import { formatDateTime, formatIssueId } from '@/lib/utils';
 import type { Issue } from '@/lib/types';
 
 const SLA_HOURS: Record<string, number> = {
@@ -169,7 +169,7 @@ export default function AdminIssueDetails() {
           </Button>
           <span className="text-muted-foreground/40">/</span>
           <span className="text-sm font-semibold truncate max-w-[320px]">{issue.title}</span>
-          <span className="text-xs text-muted-foreground">#{issue.id}</span>
+          <span className="text-xs text-muted-foreground">{formatIssueId(issue)}</span>
           <div className="ml-auto flex items-center gap-2">
             <StatusBadge status={issue.status} />
             <SeverityBadge severity={issue.severity} />
@@ -187,7 +187,7 @@ export default function AdminIssueDetails() {
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Issue</p>
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span>#{issue.id}</span>
+                  <span>{formatIssueId(issue)}</span>
                 </div>
                 <h1 className="text-sm font-semibold leading-snug">{issue.title}</h1>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">

@@ -139,7 +139,6 @@ function transformBackendUser(backendUser: BackendUser): User {
 
   return {
     id: String(backendUser.id),
-    crcId: backendUser.crc_id,
     email,
     name: fullName,
     role: mappedRole,
@@ -159,6 +158,7 @@ function transformBackendIssue(
 
   return {
     id: String(backendIssue.id),
+    crcId: backendIssue.crc_id,
     title: backendIssue.title,
     description: backendIssue.description,
     status: backendIssue.status,
