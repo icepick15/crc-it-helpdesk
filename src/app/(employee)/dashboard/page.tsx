@@ -60,7 +60,7 @@ export default function EmployeeDashboard() {
               Track and manage your IT support requests
             </p>
           </div>
-          <Button onClick={() => setCreateModalOpen(true)}>
+          <Button onClick={() => setCreateModalOpen(true)} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Create Issue
           </Button>

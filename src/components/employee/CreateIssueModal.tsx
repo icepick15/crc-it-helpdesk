@@ -357,8 +357,9 @@ export function CreateIssueModal({ open, onOpenChange, onSubmit }: CreateIssueMo
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      {/* overflow-visible lets the priority dropdown extend below the dialog boundary */}
-      <DialogContent className="sm:max-w-[500px] overflow-visible">
+      {/* overflow-visible lets the priority dropdown extend below the dialog boundary;
+          on small screens the dialog scrolls instead so tall forms stay reachable */}
+      <DialogContent className="sm:max-w-[500px] max-h-[92vh] overflow-y-auto sm:max-h-none sm:overflow-visible">
         <DialogHeader>
           <DialogTitle>Create New Issue</DialogTitle>
           <DialogDescription>

@@ -60,7 +60,7 @@ export default function AdminDashboard() {
               Manage and respond to IT support requests
             </p>
           </div>
-          <Button onClick={() => setShowReportModal(true)} className="gap-2">
+          <Button onClick={() => setShowReportModal(true)} className="gap-2 w-full sm:w-auto">
             <FileDown className="h-4 w-4" />
             Generate Report
           </Button>

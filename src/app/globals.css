@@ -169,23 +169,12 @@
     }
   }
 
+  /* Cap content width on large screens so tables and cards don't stretch */
   @media (min-width: 1280px) {
     .container {
       max-width: 1400px;
       padding-left: 2rem;
       padding-right: 2rem;
-    }
-  }
-
-  @media (min-width: 1536px) {
-    .container {
-      max-width: 1600px;
-    }
-  }
-
-  @media (min-width: 1920px) {
-    .container {
-      max-width: 1800px;
     }
   }
 }

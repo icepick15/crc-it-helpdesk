@@ -35,19 +35,19 @@ export function StatsCards({ stats, loading }: StatsCardsProps) {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-3 lg:gap-6">
+    <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
       {cards.map((card) => (
-        <Card key={card.title}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card key={card.title} className="py-3 gap-2 sm:py-6 sm:gap-6">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 sm:pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
               {card.title}
             </CardTitle>
-            <div className={`p-2 rounded-lg ${card.bgColor}`}>
+            <div className={`hidden sm:block p-2 rounded-lg ${card.bgColor}`}>
               <card.icon className={`h-4 w-4 ${card.color}`} />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className={`text-3xl font-bold ${loading ? 'animate-pulse' : ''}`}>
+          <CardContent className="px-3 sm:px-6">
+            <div className={`text-2xl sm:text-3xl font-bold ${loading ? 'animate-pulse' : ''}`}>
               {loading ? '-' : card.value}
             </div>
           </CardContent>

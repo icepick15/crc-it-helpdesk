@@ -165,9 +165,9 @@ export default function AdminIssueDetails() {
             className="gap-1.5 h-8 px-2 text-muted-foreground"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Dashboard
+            <span className="hidden sm:inline">Dashboard</span>
           </Button>
-          <span className="text-muted-foreground/40">/</span>
+          <span className="hidden sm:inline text-muted-foreground/40">/</span>
           <span className="text-sm font-semibold truncate min-w-0">{issue.title}</span>
           <span className="text-xs text-muted-foreground shrink-0">{formatIssueId(issue)}</span>
           <div className="ml-auto flex items-center gap-2 shrink-0">
@@ -176,11 +176,11 @@ export default function AdminIssueDetails() {
           </div>
         </div>
 
-        {/* ── Two-column grid ──────────────────────────────── */}
-        <div className="grid grid-cols-2 flex-1 overflow-hidden">
+        {/* ── Two-column grid (stacks on mobile) ───────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 flex-1 overflow-y-auto lg:overflow-hidden">
 
           {/* ── LEFT PANEL — metadata ───────────────────────── */}
-          <aside className="overflow-y-auto border-r bg-background flex flex-col divide-y">
+          <aside className="lg:overflow-y-auto border-b lg:border-b-0 lg:border-r bg-background flex flex-col divide-y">
 
             {/* Issue info */}
             <section className="p-4 space-y-2">
@@ -291,10 +291,10 @@ export default function AdminIssueDetails() {
           </aside>
 
           {/* ── RIGHT PANEL — conversation + reply ─────────── */}
-          <div className="flex flex-col overflow-hidden bg-muted/30">
+          <div className="flex flex-col lg:overflow-hidden bg-muted/30">
 
-            {/* Scrollable conversation */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {/* Scrollable conversation (page scroll on mobile) */}
+            <div className="flex-1 lg:overflow-y-auto p-4 space-y-3">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
                 Conversation · {1 + (issue.replies?.length ?? 0)} message{(issue.replies?.length ?? 0) !== 0 ? 's' : ''}
               </p>
