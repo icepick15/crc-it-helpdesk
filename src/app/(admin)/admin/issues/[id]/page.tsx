@@ -168,16 +168,16 @@ export default function AdminIssueDetails() {
             Dashboard
           </Button>
           <span className="text-muted-foreground/40">/</span>
-          <span className="text-sm font-semibold truncate max-w-[320px]">{issue.title}</span>
-          <span className="text-xs text-muted-foreground">{formatIssueId(issue)}</span>
-          <div className="ml-auto flex items-center gap-2">
+          <span className="text-sm font-semibold truncate min-w-0">{issue.title}</span>
+          <span className="text-xs text-muted-foreground shrink-0">{formatIssueId(issue)}</span>
+          <div className="ml-auto flex items-center gap-2 shrink-0">
             <StatusBadge status={issue.status} />
             <SeverityBadge severity={issue.severity} />
           </div>
         </div>
 
         {/* ── Two-column grid ──────────────────────────────── */}
-        <div className="grid grid-cols-[340px_1fr] flex-1 overflow-hidden">
+        <div className="grid grid-cols-2 flex-1 overflow-hidden">
 
           {/* ── LEFT PANEL — metadata ───────────────────────── */}
           <aside className="overflow-y-auto border-r bg-background flex flex-col divide-y">

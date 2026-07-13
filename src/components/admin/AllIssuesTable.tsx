@@ -26,7 +26,11 @@ interface AllIssuesTableProps {
 
 function AssigneeBadge({ issue }: { issue: Issue }) {
   if (issue.assignedToName) {
-    return <span className="text-xs font-medium text-foreground truncate">{issue.assignedToName}</span>;
+    return (
+      <span className="text-xs font-medium text-foreground truncate block" title={issue.assignedToName}>
+        {issue.assignedToName}
+      </span>
+    );
   }
   return (
     <span className="inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
@@ -51,12 +55,12 @@ const IssueRow = memo(function IssueRow({ issue, onIssueClick, onClaim }: IssueR
         {formatIssueId(issue)}
       </TableCell>
       <TableCell className="py-2 px-3">
-        <span className="text-xs font-medium truncate block max-w-[240px] lg:max-w-[320px]">
+        <span className="text-xs font-medium truncate block" title={issue.title}>
           {issue.title}
         </span>
       </TableCell>
       <TableCell className="py-2 px-3">
-        <span className="text-xs font-medium truncate block max-w-[120px]">
+        <span className="text-xs font-medium truncate block" title={issue.employeeName}>
           {issue.employeeName}
         </span>
       </TableCell>
@@ -183,18 +187,18 @@ export const AllIssuesTable = memo(function AllIssuesTable({
     <>
       {/* Desktop table */}
       <div className="hidden md:block border rounded-lg overflow-hidden">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
-              <TableHead className="py-2 px-3 text-xs w-[60px]">ID</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[92px]">ID</TableHead>
               <TableHead className="py-2 px-3 text-xs">Title</TableHead>
               <TableHead className="py-2 px-3 text-xs w-[130px]">Employee</TableHead>
               <TableHead className="py-2 px-3 text-xs w-[80px]">Priority</TableHead>
-              <TableHead className="py-2 px-3 text-xs w-[90px]">Status</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[100px]">Status</TableHead>
               <TableHead className="py-2 px-3 text-xs w-[140px]">Assigned To</TableHead>
-              <TableHead className="py-2 px-3 text-xs w-[110px]">SLA</TableHead>
-              <TableHead className="py-2 px-3 text-xs w-[60px] text-center">💬</TableHead>
-              <TableHead className="py-2 px-3 text-xs w-[90px]">Created</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[150px]">SLA</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[52px] text-center">💬</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[100px]">Created</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
