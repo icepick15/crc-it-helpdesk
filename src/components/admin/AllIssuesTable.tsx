@@ -191,7 +191,7 @@ export const AllIssuesTable = memo(function AllIssuesTable({
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
               <TableHead className="py-2 px-3 text-xs w-[92px]">ID</TableHead>
-              <TableHead className="py-2 px-3 text-xs">Title</TableHead>
+              <TableHead className="py-2 px-3 text-xs w-[300px]">Title</TableHead>
               <TableHead className="py-2 px-3 text-xs w-[130px]">Employee</TableHead>
               <TableHead className="py-2 px-3 text-xs w-[80px]">Priority</TableHead>
               <TableHead className="py-2 px-3 text-xs w-[100px]">Status</TableHead>
