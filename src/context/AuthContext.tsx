@@ -6,11 +6,17 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { authAPI } from '@/lib/api';
 import type { User, UserRole } from '@/lib/types';
+
+// Auto sign out after this many minutes of no mouse, keyboard, or touch activity
+const IDLE_TIMEOUT_MINUTES = 15;
+const IDLE_TIMEOUT_MS = IDLE_TIMEOUT_MINUTES * 60 * 1000;
+const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'] as const;
 
 interface AuthContextType {
   user: User | null;
@@ -96,6 +102,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     router.push('/signin');
   }, [router]);
+
+  // Force sign out after IDLE_TIMEOUT_MINUTES of no user activity
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const resetIdleTimer = () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(signOut, IDLE_TIMEOUT_MS);
+    };
+
+    resetIdleTimer();
+    ACTIVITY_EVENTS.forEach((event) => window.addEventListener(event, resetIdleTimer));
+
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, resetIdleTimer));
+    };
+  }, [user, signOut]);
 
   const value: AuthContextType = {
     user,
